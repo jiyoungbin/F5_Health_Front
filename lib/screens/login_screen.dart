@@ -26,7 +26,7 @@ class LoginScreen extends StatelessWidget {
         token = await UserApi.instance.loginWithKakaoAccount();
       }
 
-      // 2) 로그인 성공 시 발급된 accessToken
+      // 2) 로그인 성공 시 발급된 accessToken //
       final String accessToken = token.accessToken;
       debugPrint('✅ 카카오 로그인 성공! accessToken: $accessToken');
 
