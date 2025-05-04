@@ -26,6 +26,8 @@ class LoginScreen extends StatelessWidget {
         token = await UserApi.instance.loginWithKakaoAccount();
       }
 
+      if (!context.mounted) return;
+
       // 2) 로그인 성공 시 발급된 accessToken //
       final String accessToken = token.accessToken;
       debugPrint('✅ 카카오 로그인 성공! accessToken: $accessToken');
@@ -41,8 +43,11 @@ class LoginScreen extends StatelessWidget {
     } catch (error) {
       // 로그인 실패 처리
       debugPrint('❌ 카카오 로그인 실패: $error');
+
+      if (!context.mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('카카오 로그인에 실패했습니다.')),
+        const SnackBar(content: Text('카카오 로그인에 실패했습니다.')),
       );
     }
   }
@@ -71,35 +76,14 @@ class LoginScreen extends StatelessWidget {
             // 카카오 로그인 버튼
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 35),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFEE500), // 카카오 옐로우
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
+              child: IconButton(
+                // 눌렀을 때 로그인 함수 호출
                 onPressed: () => _loginWithKakao(context),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // assets/kakao_logo.png 파일을 준비해 두세요
-                    Image.asset(
-                      'assets/kakao_logo.png',
-                      width: 24,
-                      height: 24,
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      '카카오로 로그인',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+                // 오로지 카카오 로고 PNG만
+                icon: Image.asset('assets/kakao_logo.png'),
+                // 아이콘 사이즈가 너무 작으면 키울 수 있어요
+                iconSize: 48,
+                splashRadius: 28, // 터치 시 물결 효과 반경
               ),
             ),
 

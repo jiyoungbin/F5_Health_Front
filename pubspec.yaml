@@ -31,6 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   kakao_flutter_sdk_user: ^1.9.7+3  # 최신 버전 확인
+  intl: ^0.18.1 # 날짜 비교용 패키지 - 홈 화면에서 사용
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -53,6 +54,9 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+
+  assets:
+    - assets/kakao_logo.png # 카카오 로그인 버튼
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
