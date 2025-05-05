@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class DrinkEntryScreen extends StatefulWidget {
-  final String drinkType; // 맥주 or 소주
+  final String drinkType; // '맥주' or '소주'
 
   const DrinkEntryScreen({super.key, required this.drinkType});
 
@@ -11,19 +11,23 @@ class DrinkEntryScreen extends StatefulWidget {
 
 class _DrinkEntryScreenState extends State<DrinkEntryScreen> {
   int _count = 0;
-  static const int cupSize = 250; // ml
+  late final int cupSize;
+
+  @override
+  void initState() {
+    super.initState();
+    cupSize = widget.drinkType == '맥주' ? 250 : 50;
+  }
 
   void _increment() {
-    setState(() {
-      _count++;
-    });
+    if (_count < 30) {
+      setState(() => _count++);
+    }
   }
 
   void _decrement() {
     if (_count > 0) {
-      setState(() {
-        _count--;
-      });
+      setState(() => _count--);
     }
   }
 
@@ -36,37 +40,31 @@ class _DrinkEntryScreenState extends State<DrinkEntryScreen> {
       body: Column(
         children: [
           const SizedBox(height: 40),
-          Text('${_count * cupSize}ml',
-              style: const TextStyle(fontSize: 40, color: Colors.deepPurple)),
+          Text(
+            '${_count * cupSize}ml',
+            style: const TextStyle(fontSize: 40, color: Colors.deepPurple),
+          ),
           const SizedBox(height: 40),
-          // 잔 그림 그리기
           Expanded(
             child: GridView.builder(
               padding: const EdgeInsets.all(20),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 5,
+                crossAxisCount: 5, // 한 줄에 5개
                 mainAxisSpacing: 16,
                 crossAxisSpacing: 16,
               ),
-              itemCount: 20,
+              itemCount: 30, // 총 30개 (5 x 6)
               itemBuilder: (context, index) {
-                bool filled = index < _count;
+                final isFilled = index < _count;
                 return GestureDetector(
                   onTap: () {
-                    if (filled) {
+                    if (isFilled) {
                       _decrement();
                     } else {
                       _increment();
                     }
                   },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      color: filled ? Colors.deepPurple[100] : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Center(child: Icon(Icons.add)),
-                  ),
+                  child: _buildDrinkIcon(isFilled),
                 );
               },
             ),
@@ -87,5 +85,21 @@ class _DrinkEntryScreenState extends State<DrinkEntryScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildDrinkIcon(bool filled) {
+    if (widget.drinkType == '맥주') {
+      return Image.asset(
+        filled ? 'assets/images/beer.png' : 'assets/images/empty_beer.png',
+        width: 40,
+        height: 40,
+      );
+    } else {
+      return Image.asset(
+        filled ? 'assets/images/soju.png' : 'assets/images/empty_soju.png',
+        width: 40,
+        height: 40,
+      );
+    }
   }
 }

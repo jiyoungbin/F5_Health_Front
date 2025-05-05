@@ -1,6 +1,5 @@
 // lib/screens/entry_screen.dart
 
-
 import 'package:flutter/material.dart';
 import '../app_data.dart';
 
@@ -44,7 +43,8 @@ class _EntryScreenState extends State<EntryScreen> {
           decoration: const InputDecoration(hintText: '숫자를 입력하세요'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
+          TextButton(
+              onPressed: () => Navigator.pop(context), child: const Text('취소')),
           TextButton(
             onPressed: () {
               final v = int.tryParse(ctrl.text) ?? 0;
@@ -66,59 +66,87 @@ class _EntryScreenState extends State<EntryScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('오늘 하루 건강 기록 정리하기')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // 흡연 기록
-          Card(
-            margin: EdgeInsets.zero,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('흡연 기록', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Text('총 흡연 개비수: ${_initialSmoke + _extraSmoke}개비'),
-                const SizedBox(height: 8),
-                OutlinedButton(
-                  onPressed: () => _showAddDialog(
-                    title: '흡연량',
-                    ctrl: _smokeController,
-                    onConfirm: (v) => setState(() => _extraSmoke += v),
-                  ),
-                  child: const Text('개비 수 추가 입력'),
+Widget build(BuildContext context) {
+  // ✅ 총 계산 (홈 기록 + 추가입력)
+  final totalSmoke = _initialSmoke + _extraSmoke;
+  final totalWater = _initialWater + _extraWater;
+
+  return Scaffold(
+    appBar: AppBar(title: const Text('오늘 하루 건강 기록 정리하기')),
+    body: SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+        // ✅✅ [수정 완료] 음수량 + 흡연 기록을 1행 2열로 배치 (변수 유지)
+        Row(
+          children: [
+
+            // ✅ 음수량 기록 블록 (왼쪽)
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ]),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // 음수량 기록
-          Card(
-            margin: EdgeInsets.zero,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('음수량 기록', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Text('총 음수량: ${_initialWater + _extraWater}잔'),
-                const SizedBox(height: 8),
-                OutlinedButton(
-                  onPressed: () => _showAddDialog(
-                    title: '음수량',
-                    ctrl: _waterController,
-                    onConfirm: (v) => setState(() => _extraWater += v),
-                  ),
-                  child: const Text('잔 수 추가 입력'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('음수량 기록', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text('오늘 음수량: $_initialWater잔'),  // ✅ 홈에서 가져온 값만 (오늘 기록)
+                    Text('총 음수량: $totalWater잔'),      // ✅ 홈 + 추가 입력 (총 기록)
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      onPressed: () => _showAddDialog(
+                        title: '음수량',
+                        ctrl: _waterController,
+                        onConfirm: (v) => setState(() => _extraWater += v),
+                      ),
+                      child: const Text('잔 수 추가 입력'),
+                    ),
+                  ],
                 ),
-              ]),
+              ),
             ),
-          ),
 
-          const SizedBox(height: 16),
+            // ✅ 흡연 기록 블록 (오른쪽)
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(left: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('흡연 기록', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text('오늘 흡연 개비수: $_initialSmoke개비'),  // ✅ 홈에서 가져온 값만 (오늘 기록)
+                    Text('총 흡연 개비수: $totalSmoke개비'),      // ✅ 홈 + 추가 입력 (총 기록)
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      onPressed: () => _showAddDialog(
+                        title: '흡연량',
+                        ctrl: _smokeController,
+                        onConfirm: (v) => setState(() => _extraSmoke += v),
+                      ),
+                      child: const Text('개비 수 추가 입력'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
 
           // 음주량 버튼 (맥주/소주)
           const Text('음주량 기록', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -167,8 +195,8 @@ class _EntryScreenState extends State<EntryScreen> {
               title: Text(meal),
               subtitle: Text(
                 AppData.meals[meal]!.isEmpty
-                  ? '아직 입력된 식단이 없습니다.'
-                  : AppData.meals[meal]!,
+                    ? '아직 입력된 식단이 없습니다.'
+                    : AppData.meals[meal]!,
               ),
               onTap: () {
                 final ctrl = TextEditingController(text: AppData.meals[meal]);
@@ -176,13 +204,20 @@ class _EntryScreenState extends State<EntryScreen> {
                   context: context,
                   builder: (_) => AlertDialog(
                     title: Text('$meal 입력'),
-                    content: TextField(controller: ctrl, decoration: const InputDecoration(hintText: '내용을 입력하세요')),
+                    content: TextField(
+                        controller: ctrl,
+                        decoration:
+                            const InputDecoration(hintText: '내용을 입력하세요')),
                     actions: [
-                      TextButton(onPressed: () => Navigator.pop(context), child: const Text('취소')),
-                      TextButton(onPressed: () {
-                        setState(() => AppData.meals[meal] = ctrl.text);
-                        Navigator.pop(context);
-                      }, child: const Text('저장')),
+                      TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('취소')),
+                      TextButton(
+                          onPressed: () {
+                            setState(() => AppData.meals[meal] = ctrl.text);
+                            Navigator.pop(context);
+                          },
+                          child: const Text('저장')),
                     ],
                   ),
                 );
@@ -203,21 +238,29 @@ class _EntryScreenState extends State<EntryScreen> {
       // 공통 BottomNav
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 0, // 일괄 입력(Entry)이 0번
-         onTap: (i) {
+        onTap: (i) {
           if (i == 0) return;
           switch (i) {
-            case 1: Navigator.pushReplacementNamed(context, '/savings'); break;
-            case 2: Navigator.pushReplacementNamed(context, '/home'); break;
-            case 3: Navigator.pushReplacementNamed(context, '/report'); break;
-            case 4: Navigator.pushReplacementNamed(context, '/badge'); break;
+            case 1:
+              Navigator.pushReplacementNamed(context, '/savings');
+              break;
+            case 2:
+              Navigator.pushReplacementNamed(context, '/home');
+              break;
+            case 3:
+              Navigator.pushReplacementNamed(context, '/report');
+              break;
+            case 4:
+              Navigator.pushReplacementNamed(context, '/badge');
+              break;
           }
         },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.edit),       label: '일괄 입력'),
-          BottomNavigationBarItem(icon: Icon(Icons.savings),    label: '절약 금액'),
-          BottomNavigationBarItem(icon: Icon(Icons.home),       label: '홈'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart),  label: '리포트'),
-          BottomNavigationBarItem(icon: Icon(Icons.emoji_events),label: '배지'),
+          BottomNavigationBarItem(icon: Icon(Icons.edit), label: '일괄 입력'),
+          BottomNavigationBarItem(icon: Icon(Icons.savings), label: '절약 금액'),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: '홈'),
+          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: '리포트'),
+          BottomNavigationBarItem(icon: Icon(Icons.emoji_events), label: '배지'),
         ],
         selectedItemColor: Colors.deepPurple,
         unselectedItemColor: Colors.grey,

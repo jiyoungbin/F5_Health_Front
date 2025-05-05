@@ -5,6 +5,9 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'screens/login_screen.dart'; // 방금 만든 로그인 화면
 import 'screens/home_screen.dart';
 import 'screens/entry_screen.dart';
+import 'screens/report_screen.dart';
+import 'screens/setting_screen.dart';
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -33,10 +36,11 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (_) => const LoginScreen(),
         '/home': (_) => const HomeScreen(), // HomeScreen은 별도 구현
-        '/entry': (_) => EntryScreen(), 
+        '/entry': (_) => EntryScreen(),
         '/savings': (_) => Scaffold(body: Center(child: Text('절약 금액 화면'))),
-        '/report': (_) => Scaffold(body: Center(child: Text('리포트 화면'))),
+        '/report': (_) => const ReportScreen(),
         '/badge': (_) => Scaffold(body: Center(child: Text('배지 화면'))),
+        '/settings': (_) => const SettingsScreen(),
       },
     );
   }
