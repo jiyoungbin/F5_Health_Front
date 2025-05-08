@@ -1,10 +1,13 @@
 // lib/app_data.dart
 
 import 'package:intl/intl.dart';
+import 'package:flutter/material.dart';
 
 class AppData {
   static int waterCount = 0;
   static int smokeCount = 0;
+
+  static TimeOfDay? alarmTime; // 전역 알람 시간
 
   static Map<String, String> meals = {
     '아침': '',

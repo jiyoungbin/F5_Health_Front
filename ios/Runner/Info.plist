@@ -23,6 +23,17 @@
         </dict>
     </array>
 
+    <!-- Flutter Local Notifications 권한 설정 -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>fetch</string>
+        <string>remote-notification</string>
+    </array>
+
+    <key>NSUserNotificationAlertStyle</key>
+    <string>alert</string>
+
+
     <!-- 3. 토큰 인텐트/쿼리 허용 스킴 추가 -->
     <key>LSApplicationQueriesSchemes</key>
     <array>

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import '../app_data.dart'; // ← 전역 변수 클래스 임포트
 
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
@@ -106,19 +107,75 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 32),
 
+            
             // 식단 입력
-            const Text('식단 입력', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text('식단', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            ...AppData.meals.keys.map((meal) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(meal),
-                  subtitle: Text(
-                    AppData.meals[meal]!.isEmpty
-                        ? '입력된 내용이 없습니다.'
-                        : AppData.meals[meal]!,
+
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('0 kcal', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: const [
+                      Text('탄 0%', style: TextStyle(color: Colors.deepPurple)),
+                      Text('단 0%', style: TextStyle(color: Colors.blue)),
+                      Text('지 0%', style: TextStyle(color: Colors.teal)),
+                    ],
                   ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: AppData.meals.keys.map((meal) {
+                String emoji = '';
+                switch (meal) {
+                  case '아침': emoji = '🍳'; break;
+                  case '점심': emoji = '☀️'; break;
+                  case '저녁': emoji = '🌙'; break;
+                  case '간식': emoji = '🍎'; break;
+                }
+
+                return GestureDetector(
                   onTap: () => _editMeal(meal),
-                )),
+                  child: Container(
+                    width: MediaQuery.of(context).size.width / 4 - 24,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(emoji, style: const TextStyle(fontSize: 28)),
+                        const SizedBox(height: 8),
+                        Text(meal, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        AppData.meals[meal]!.isEmpty
+                            ? const Icon(Icons.add, size: 20, color: Colors.grey)
+                            : Text(AppData.meals[meal]!, style: const TextStyle(fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+
             const SizedBox(height: 80),
           ],
         ),
