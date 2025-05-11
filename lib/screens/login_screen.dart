@@ -1,19 +1,21 @@
-// lib/screens/login_screen.dart
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
-// 카카오 SDK 패키지 임포트
-import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
-// http 패키지 임포트 (추가)
 import 'package:http/http.dart' as http;
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../services/health_service.dart'; // ✅ 헬스 서비스 import
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({Key? key}) : super(key: key);
 
-  /// 카카오 로그인 함수
   Future<void> _loginWithKakao(BuildContext context) async {
     try {
       OAuthToken token;
-      // 1) 카카오톡 앱이 설치되어 있으면 앱으로, 없으면 카카오계정 웹뷰로 로그인
+
       if (await isKakaoTalkInstalled()) {
         token = await UserApi.instance.loginWithKakaoTalk();
       } else {
@@ -22,22 +24,214 @@ class LoginScreen extends StatelessWidget {
 
       if (!context.mounted) return;
 
-      // 2) 로그인 성공 시 발급된 accessToken
-      final String accessToken = token.accessToken;
+      final accessToken = token.accessToken;
       debugPrint('✅ 카카오 로그인 성공! accessToken: $accessToken');
 
-      // 3) 백엔드에 토큰 전송 (URL 수정)
-      final response = await http.post(
-        Uri.parse('http://localhost:8080/signup/oauth2/kakao'), // 변경된 주소
-        body: {'token': accessToken},
-      );
-      debugPrint('📡 백엔드 응답 코드: ${response.statusCode}');
+      final deviceInfoPlugin = DeviceInfoPlugin();
+      String udid = 'unknown';
+      String os = 'unknown';
 
-      // 4) 홈 화면으로 이동
-      Navigator.pushReplacementNamed(context, '/home');
+      if (Platform.isAndroid) {
+        final info = await deviceInfoPlugin.androidInfo;
+        udid = info.id;
+        os = 'ANDROID';
+      } else {
+        final info = await deviceInfoPlugin.iosInfo;
+        udid = info.identifierForVendor ?? 'unknown';
+        os = 'iOS';
+      }
+
+      final loginPayload = {
+        'accessToken': accessToken,
+        'deviceInfo': {
+          'udid': udid,
+          'os': os,
+        }
+      };
+
+      final signinRes = await http.post(
+        Uri.parse('http://localhost:8080/signin/oauth2/kakao'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(loginPayload),
+      );
+
+      debugPrint('📡 signin 응답 코드: ${signinRes.statusCode}');
+      debugPrint('📦 signin 응답 바디: ${signinRes.body}');
+
+      if (signinRes.statusCode == 200) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
+
+        // ✅ HealthKit 권한 요청
+        final healthService = HealthService();
+        final authorized = await healthService.requestAuthorization();
+        if (authorized) {
+          debugPrint('✅ HealthKit 권한 허용됨');
+        } else {
+          debugPrint('❌ HealthKit 권한 거부됨');
+        }
+        Navigator.pushReplacementNamed(context, '/home');
+      } else if (signinRes.statusCode == 302) {
+        Navigator.pushReplacementNamed(
+          context,
+          '/survey',
+          arguments: loginPayload,
+        );
+      } else {
+        throw Exception('로그인 실패: ${signinRes.statusCode}');
+      }
     } catch (error) {
-      // 로그인 실패 처리
-      debugPrint('❌ 카카오 로그인 실패: $error');
+      debugPrint('❌ 로그인 또는 회원가입 실패: $error');
+
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('카카오 로그인에 실패했습니다.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const SizedBox(height: 100),
+            const Center(
+              child: Text(
+                'F5 Health',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 35),
+              child: IconButton(
+                onPressed: () => _loginWithKakao(context),
+                icon: Image.asset('assets/kakao_logo.png'),
+                iconSize: 48,
+                splashRadius: 28,
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(bottom: 30),
+              child: Text(
+                '앱 이용 약관 및 개인정보 처리방침에 동의합니다.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF828282), fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+/*
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
+
+class LoginScreen extends StatelessWidget {
+  const LoginScreen({Key? key}) : super(key: key);
+
+  Future<void> _loginWithKakao(BuildContext context) async {
+    try {
+      OAuthToken token;
+
+      // 카카오톡 앱 설치 여부에 따라 로그인 방식 선택
+      if (await isKakaoTalkInstalled()) {
+        token = await UserApi.instance.loginWithKakaoTalk();
+      } else {
+        token = await UserApi.instance.loginWithKakaoAccount();
+      }
+
+      if (!context.mounted) return;
+
+      final accessToken = token.accessToken;
+      debugPrint('✅ 카카오 로그인 성공! accessToken: $accessToken');
+
+      // 디바이스 정보 수집
+      final deviceInfoPlugin = DeviceInfoPlugin();
+      String udid = 'unknown';
+      String os = 'unknown';
+
+      if (Platform.isAndroid) {
+        final info = await deviceInfoPlugin.androidInfo;
+        udid = info.id;
+        os = 'ANDROID';
+      } else {
+        final info = await deviceInfoPlugin.iosInfo;
+        udid = info.identifierForVendor ?? 'unknown';
+        os = 'iOS';
+      }
+
+      final loginPayload = {
+        'accessToken': accessToken,
+        'deviceInfo': {
+          'udid': udid,
+          'os': os,
+        }
+      };
+
+      // 로그인 API 호출
+      final signinRes = await http.post(
+        Uri.parse(
+            'http://localhost:8080/signin/oauth2/kakao'), // 실제 서버 주소로 변경 필요
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(loginPayload),
+      );
+
+      debugPrint('📡 signin 응답 코드: ${signinRes.statusCode}');
+      debugPrint('📦 signin 응답 바디: ${signinRes.body}');
+
+      if (signinRes.statusCode == 200) {
+        // 로그인 성공
+        Navigator.pushReplacementNamed(context, '/home');
+      } else if (signinRes.statusCode == 302) {
+        // 신규 회원 → 설문 데이터와 함께 회원가입
+        final signupPayload = {
+          'loginRequest': loginPayload,
+          'memberCheckUp': {
+            'birthDate': '2000-04-18',
+            'gender': 'MALE',
+            'height': 173,
+            'weight': 65,
+            'bloodType': 'AB',
+            'daySmokingAvg': 8,
+            'weekAlcoholAvg': 6,
+            'weekExerciseFreq': 3
+          }
+        };
+
+        final signupRes = await http.post(
+          Uri.parse(
+              'http://localhost:8080/signup/oauth2/kakao'), // 실제 서버 주소로 변경 필요
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(signupPayload),
+        );
+
+        debugPrint('📡 signup 응답 코드: ${signupRes.statusCode}');
+        debugPrint('📦 signup 응답 바디: ${signupRes.body}');
+
+        if (signupRes.statusCode == 201) {
+          Navigator.pushReplacementNamed(context, '/home');
+        } else {
+          throw Exception('회원가입 실패');
+        }
+      } else {
+        throw Exception('로그인 실패: ${signinRes.statusCode}');
+      }
+    } catch (error) {
+      debugPrint('❌ 로그인 또는 회원가입 실패: $error');
 
       if (!context.mounted) return;
 
@@ -74,115 +268,6 @@ class LoginScreen extends StatelessWidget {
                 splashRadius: 28,
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.only(bottom: 30),
-              child: Text(
-                '앱 이용 약관 및 개인정보 처리방침에 동의합니다.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFF828282),
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/*
-// lib/screens/login_screen.dart
-
-import 'package:flutter/material.dart';
-// 카카오 SDK 패키지 임포트
-import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
-
-class LoginScreen extends StatelessWidget {
-  const LoginScreen({Key? key}) : super(key: key);
-
-  /// 카카오 SDK 초기화는 앱 시작 직후 main()에서 해주세요.
-  /// 예시:
-  /// void main() {
-  ///   WidgetsFlutterBinding.ensureInitialized();
-  ///   KakaoSdk.init(nativeAppKey: 'YOUR_NATIVE_APP_KEY');
-  ///   runApp(const MyApp());
-  /// }
-
-  /// 카카오 로그인 함수
-  Future<void> _loginWithKakao(BuildContext context) async {
-    try {
-      OAuthToken token;
-      // 1) 카카오톡 앱이 설치되어 있으면 앱으로, 없으면 카카오계정 웹뷰로 로그인
-      if (await isKakaoTalkInstalled()) {
-        token = await UserApi.instance.loginWithKakaoTalk();
-      } else {
-        token = await UserApi.instance.loginWithKakaoAccount();
-      }
-
-      if (!context.mounted) return;
-
-      // 2) 로그인 성공 시 발급된 accessToken //
-      final String accessToken = token.accessToken;
-      debugPrint('✅ 카카오 로그인 성공! accessToken: $accessToken');
-
-      //3) (선택) 백엔드에 토큰 전송
-      // await http.post(
-      // Uri.parse('https://your.api/login/kakao'),
-      // body: {'token': accessToken},
-      // );
-
-      // 4) 홈 화면으로 이동
-      Navigator.pushReplacementNamed(context, '/home');
-    } catch (error) {
-      // 로그인 실패 처리
-      debugPrint('❌ 카카오 로그인 실패: $error');
-
-      if (!context.mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('카카오 로그인에 실패했습니다.')),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        // Stack을 쓰지 않고 Column으로 간결하게 레이아웃
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // 상단 로고/타이틀 영역
-            const SizedBox(height: 100),
-            const Center(
-              child: Text(
-                'F5 Health',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-
-            // 카카오 로그인 버튼
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 35),
-              child: IconButton(
-                // 눌렀을 때 로그인 함수 호출
-                onPressed: () => _loginWithKakao(context),
-                // 오로지 카카오 로고 PNG만
-                icon: Image.asset('assets/kakao_logo.png'),
-                // 아이콘 사이즈가 너무 작으면 키울 수 있어요
-                iconSize: 48,
-                splashRadius: 28, // 터치 시 물결 효과 반경
-              ),
-            ),
-
-            // 약관 동의 문구
             const Padding(
               padding: EdgeInsets.only(bottom: 30),
               child: Text(

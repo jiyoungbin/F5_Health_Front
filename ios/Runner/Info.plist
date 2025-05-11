@@ -43,6 +43,13 @@
         <string>storykompassauth</string>
     </array>
 
+    <!-- 헬스킷 권한 설정 -->
+    <key>NSHealthShareUsageDescription</key>
+    <string>건강 데이터를 가져오기 위해 사용합니다</string>
+    <key>NSHealthUpdateUsageDescription</key>
+    <string>운동 기록을 HealthKit에서 가져오기 위해 필요합니다</string>
+    
+
     <!-- 기존에 있던 CFBundle 설정들 계속 -->
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
