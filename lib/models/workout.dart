@@ -1,22 +1,22 @@
 class Workout {
-  final String type;
+  final String exerciseType; // ✅ 변수명도 서버와 일치
   final DateTime start;
   final DateTime end;
   final double calories;
 
   Workout({
-    required this.type,
+    required this.exerciseType,
     required this.start,
     required this.end,
     required this.calories,
   });
 
   Map<String, dynamic> toJson() {
+    final durationSeconds = end.difference(start).inSeconds;
     return {
-      'type': type,
-      'start': start.toIso8601String(),
-      'end': end.toIso8601String(),
-      'calories': calories,
+      'exerciseType': exerciseType,
+      'exerciseDuration': durationSeconds,
+      'exerciseCalories': calories.round(),
     };
   }
 }

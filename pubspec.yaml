@@ -40,6 +40,11 @@ dependencies:
   device_info_plus: ^10.1.0  # 로그인에 사용되는 디바이스 정보 받아오는 용도
   health: ^12.2.0
   fl_chart: ^0.66.0 # 주간 일간 그래프 그리기 용도
+  hive: ^2.2.3          # 내부 db인 hive 사용을 위해 추가
+  hive_flutter: ^1.1.0
+  path_provider: ^2.1.1
+  hive_generator: ^2.0.1 # 모델/헬스 레코드 파일에서 사용
+  build_runner: ^2.4.6 # 모델/헬스 레코드 파일에서 사용
 
   
 
@@ -50,6 +55,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  hive_generator: ^2.0.1 # hive
+  build_runner: ^2.4.6
 
     
 

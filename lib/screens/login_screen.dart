@@ -58,9 +58,22 @@ class LoginScreen extends StatelessWidget {
       debugPrint('📡 signin 응답 코드: ${signinRes.statusCode}');
       debugPrint('📦 signin 응답 바디: ${signinRes.body}');
 
-      if (signinRes.statusCode == 200) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool('isLoggedIn', true);
+     if (signinRes.statusCode == 200) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+
+ // ✅ 서버 응답에서 JWT accessToken 파싱
+      final decoded = jsonDecode(signinRes.body);
+      final serverAccessToken = decoded['tokenResponse']['accessToken'];
+
+      if (serverAccessToken == null || !serverAccessToken.contains('.')) {
+        debugPrint('❌ 서버 accessToken이 유효하지 않음');
+        return;
+      }
+
+  // ✅ 서버 accessToken 저장 (카카오 accessToken 아님!)
+  await prefs.setString('accessToken', serverAccessToken);
+
 
         // ✅ HealthKit 권한 요청
         final healthService = HealthService();
