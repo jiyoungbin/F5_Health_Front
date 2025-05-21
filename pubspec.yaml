@@ -72,18 +72,21 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-
+  uses-material-design: true
+  
   assets:
     - assets/kakao_logo.png # 카카오 로그인 버튼
     - assets/images/beer.png # 일괄 입력 맥주
     - assets/images/empty_beer.png # 일괄 입력 빈 맥주
     - assets/images/soju.png # 일괄 입력 소주
     - assets/images/empty_soju.png # 일괄 입력 빈 소주
+    - assets/badges/
+  
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
-  uses-material-design: true
+  
 
   # To add assets to your application, add an assets section, like this:
   # assets:

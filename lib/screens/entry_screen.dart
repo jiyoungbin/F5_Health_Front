@@ -7,7 +7,6 @@ import '../app_data.dart';
 import 'meal_food_screen.dart';
 import 'drink_entry_screen.dart';
 import '../services/health_service.dart';
-import '../models/health_record.dart'; // ✅ Hive 모델 import
 
 class EntryScreen extends StatefulWidget {
   const EntryScreen({Key? key}) : super(key: key);
@@ -87,18 +86,27 @@ class _EntryScreenState extends State<EntryScreen> {
           'waterIntake': AppData.waterCount * 250,
           'smokedCigarettes': AppData.smokeCount,
           'consumedAlcoholDrinks': _alcoholCount,
-          'alcoholSpentMoney': _alcoholSpentMoney,
+          'alcoholCost': _alcoholSpentMoney,
         },
         'appleHealthKit': {
           'activity': {
-            'stepCount': healthData['stepCount'],
-            'distanceWalkingRunning': healthData['activity']
-                ['distanceWalkingRunning'],
-            'activeEnergyBurned': healthData['activity']['activeEnergyBurned'],
-            'appleExerciseTime': healthData['activity']['appleExerciseTime'],
+            'stepCount': (healthData['stepCount'] ?? 0).round(),
+            'distanceWalkingRunning':
+                (healthData['activity']['distanceWalkingRunning'] ?? 0.0)
+                    .round(),
+            'activeEnergyBurned':
+                (healthData['activity']['activeEnergyBurned'] ?? 0.0).round(),
+            'appleExerciseTime':
+                (healthData['activity']['appleExerciseTime'] ?? 0).round(),
           },
           'sleepAnalysis': healthData['sleep'],
-          'vitalSigns': healthData['vital'],
+          'vitalSigns': {
+            'heartRate': (healthData['vital']['heartRate'] ?? 0).round(),
+            'oxygenSaturation':
+                (healthData['vital']['oxygenSaturation'] ?? 0).round(),
+            'bodyTemperature':
+                (healthData['vital']['bodyTemperature'] ?? 0.0).toDouble(),
+          },
           'workouts': {
             'workoutTypes': healthData['exercise']
                 .map((e) => e['exerciseType'])
@@ -118,7 +126,6 @@ class _EntryScreenState extends State<EntryScreen> {
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken') ?? '';
-    print('📛 accessToken: $token');
     if (token.isEmpty) {
       print('❌ 저장된 액세스 토큰이 없거나 비어 있음');
       return;
@@ -138,30 +145,6 @@ class _EntryScreenState extends State<EntryScreen> {
     } else {
       print('❌ 전송 실패: ${res.statusCode}');
     }
-
-    // ✅ Hive 저장
-    final todayKey = DateTime.now().toIso8601String().split('T')[0];
-    final record = HealthDailyRecord(
-      waterIntake: AppData.waterCount * 250,
-      alcoholAmount: _alcoholCount,
-      alcoholSpentMoney: _alcoholSpentMoney,
-      smokingAmount: AppData.smokeCount,
-      stepCount: healthData['stepCount'] ?? 0,
-      distanceWalkingRunning:
-          healthData['activity']['distanceWalkingRunning'] ?? 0.0,
-      activeEnergyBurned: healthData['activity']['activeEnergyBurned'] ?? 0,
-      appleExerciseTime: healthData['activity']['appleExerciseTime'] ?? 0,
-      heartRate: healthData['vital']['heartRate'] ?? 0,
-      totalCaloriesBurned: healthData['activity']['activeEnergyBurned'] ?? 0,
-      sleepHours: healthData['sleep']['duration'] ?? 0,
-      workoutTypes: healthData['exercise']
-          .map<String>((e) => e['exerciseType'].toString())
-          .toList(),
-      meals: AppData.toMealRecordList(),
-    );
-
-    await AppData.healthBox?.put(todayKey, record);
-    print('✅ Hive 저장 완료: $todayKey');
 
     Navigator.pop(context);
   }
@@ -205,7 +188,7 @@ class _EntryScreenState extends State<EntryScreen> {
               _buildAlcoholButton('소주'),
             ]),
             const SizedBox(height: 8),
-            Text('음주에 사용한 금액 입력 (원)',
+            const Text('음주에 사용한 금액 입력 (원)',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             TextField(
               controller: _alcoholMoneyController,
@@ -341,7 +324,6 @@ class _EntryScreenState extends State<EntryScreen> {
 }
 
 /*
-// EntryScreen.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -351,6 +333,7 @@ import '../app_data.dart';
 import 'meal_food_screen.dart';
 import 'drink_entry_screen.dart';
 import '../services/health_service.dart';
+import '../models/health_record.dart';
 
 class EntryScreen extends StatefulWidget {
   const EntryScreen({Key? key}) : super(key: key);
@@ -430,18 +413,27 @@ class _EntryScreenState extends State<EntryScreen> {
           'waterIntake': AppData.waterCount * 250,
           'smokedCigarettes': AppData.smokeCount,
           'consumedAlcoholDrinks': _alcoholCount,
-          'alcoholSpentMoney': _alcoholSpentMoney,
+          'alcoholCost': _alcoholSpentMoney,
         },
         'appleHealthKit': {
           'activity': {
-            'stepCount': healthData['stepCount'],
-            'distanceWalkingRunning': healthData['activity']
-                ['distanceWalkingRunning'],
-            'activeEnergyBurned': healthData['activity']['activeEnergyBurned'],
-            'appleExerciseTime': healthData['activity']['appleExerciseTime'],
+            'stepCount': (healthData['stepCount'] ?? 0).round(),
+            'distanceWalkingRunning':
+                (healthData['activity']['distanceWalkingRunning'] ?? 0.0)
+                    .round(),
+            'activeEnergyBurned':
+                (healthData['activity']['activeEnergyBurned'] ?? 0.0).round(),
+            'appleExerciseTime':
+                (healthData['activity']['appleExerciseTime'] ?? 0).round(),
           },
           'sleepAnalysis': healthData['sleep'],
-          'vitalSigns': healthData['vital'],
+          'vitalSigns': {
+            'heartRate': (healthData['vital']['heartRate'] ?? 0).round(),
+            'oxygenSaturation':
+                (healthData['vital']['oxygenSaturation'] ?? 0).round(),
+            'bodyTemperature':
+                (healthData['vital']['bodyTemperature'] ?? 0.0).toDouble(),
+          },
           'workouts': {
             'workoutTypes': healthData['exercise']
                 .map((e) => e['exerciseType'])
@@ -481,6 +473,38 @@ class _EntryScreenState extends State<EntryScreen> {
     } else {
       print('❌ 전송 실패: ${res.statusCode}');
     }
+
+    final todayKey = DateTime.now().toIso8601String().split('T')[0];
+
+    // ✅ 디버깅 출력
+    print('📦 AppData.healthBox 상태: ${AppData.healthBox}');
+    print('📦 AppData.healthBox isOpen: ${AppData.healthBox?.isOpen}');
+    print('🗝 저장할 key: $todayKey');
+
+    final record = HealthDailyRecord(
+      waterIntake: AppData.waterCount * 250,
+      alcoholAmount: _alcoholCount,
+      alcoholSpentMoney: _alcoholSpentMoney,
+      smokingAmount: AppData.smokeCount,
+      stepCount: (healthData['stepCount'] ?? 0).round(),
+      distanceWalkingRunning:
+          (healthData['activity']['distanceWalkingRunning'] ?? 0.0).toDouble(),
+      activeEnergyBurned:
+          (healthData['activity']['activeEnergyBurned'] ?? 0.0).round(),
+      appleExerciseTime:
+          (healthData['activity']['appleExerciseTime'] ?? 0.0).toDouble(),
+      heartRate: (healthData['vital']['heartRate'] ?? 0.0).round(),
+      totalCaloriesBurned:
+          (healthData['activity']['activeEnergyBurned'] ?? 0.0).round(),
+      sleepHours: (healthData['sleep']['duration'] ?? 0.0).round(),
+      workoutTypes: healthData['exercise']
+          .map<String>((e) => e['exerciseType'].toString())
+          .toList(),
+      meals: AppData.toMealRecordList(),
+    );
+
+    await AppData.healthBox?.put(todayKey, record);
+    print('✅ Hive 저장 완료: $todayKey');
 
     Navigator.pop(context);
   }
@@ -524,7 +548,7 @@ class _EntryScreenState extends State<EntryScreen> {
               _buildAlcoholButton('소주'),
             ]),
             const SizedBox(height: 8),
-            Text('음주에 사용한 금액 입력 (원)',
+            const Text('음주에 사용한 금액 입력 (원)',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             TextField(
               controller: _alcoholMoneyController,

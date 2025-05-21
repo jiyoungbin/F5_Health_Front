@@ -1,15 +1,10 @@
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
-
-// ⏬ Hive 모델 import 추가
-import 'models/health_record.dart';
 
 class AppData {
   static int waterCount = 0;
   static int smokeCount = 0;
   static TimeOfDay? alarmTime;
-  static Box? healthBox;
 
   static Map<String, List<Map<String, dynamic>>> meals = {
     '아침': [],
@@ -81,30 +76,6 @@ class AppData {
 
   static List<int> getMealCounts() {
     return meals.values.map((list) => list.length).toList();
-  }
-
-  // ✅ Hive 저장용 변환 함수 추가
-  static List<MealRecord> toMealRecordList() {
-    List<MealRecord> result = [];
-
-    meals.forEach((mealTypeKr, foodList) {
-      if (foodList.isEmpty) return;
-
-      result.add(
-        MealRecord(
-          mealType: getMealTypeEnum(mealTypeKr),
-          mealTime: DateTime.now(), // 사용자가 직접 지정하는 경우가 아니라면 현재 시간으로
-          foods: foodList
-              .map((f) => FoodEntry(
-                    foodCode: f['foodCode'],
-                    count: (f['amount'] ?? 1).toInt(),
-                  ))
-              .toList(),
-        ),
-      );
-    });
-
-    return result;
   }
 }
 

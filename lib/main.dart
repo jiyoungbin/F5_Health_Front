@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart'; // ✅ Hive 관련
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -12,25 +11,12 @@ import 'screens/setting_screen.dart';
 import 'screens/survey_screen.dart';
 import 'screens/saving_screen.dart';
 import 'services/notification_service.dart';
-
-// ✅ Hive 모델 어댑터 등록용 import
-import 'models/health_record.dart';
+import 'screens/badge_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // ✅ Hive 초기화
-  await Hive.initFlutter();
-
-  // ✅ Hive 어댑터 등록 (반드시 박스 열기 전에)
-  Hive.registerAdapter(HealthDailyRecordAdapter());
-  Hive.registerAdapter(MealRecordAdapter());
-  Hive.registerAdapter(FoodEntryAdapter());
-
-  // ✅ Hive 박스 열기
-  AppData.healthBox = await Hive.openBox('healthDataBox');
 
   // ✅ 알림 초기화
   await initNotification();
@@ -81,7 +67,7 @@ class MyApp extends StatelessWidget {
         '/entry': (_) => EntryScreen(),
         '/savings': (_) => const SavingScreen(),
         '/report': (_) => const ReportScreen(),
-        '/badge': (_) => Scaffold(body: Center(child: Text('배지 화면'))),
+        '/badge': (_) => const BadgeScreen(),
         '/settings': (_) => const SettingsScreen(),
         '/survey': (_) => const SurveyScreen(),
       },
