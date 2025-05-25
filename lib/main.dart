@@ -13,10 +13,19 @@ import 'screens/saving_screen.dart';
 import 'services/notification_service.dart';
 import 'screens/badge_screen.dart';
 
+import 'models/eaten_food.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Hive.initFlutter();
+  Hive.registerAdapter(EatenFoodAdapter());
+
+  // ✅ 여기서 한 번만 열어두기
+  await Hive.openBox<List<EatenFood>>('mealFoodsBox');
 
   // ✅ 알림 초기화
   await initNotification();

@@ -1,14 +1,15 @@
-// lib/screens/home_screen.dart
-
-import 'dart:convert'; // ✅ 추가
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http; // ✅ 추가
-import 'package:shared_preferences/shared_preferences.dart'; // ✅ 추가
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../app_data.dart';
 import '../services/health_service.dart';
 import '../models/workout.dart';
 import 'package:intl/intl.dart';
 import 'meal_food_screen.dart';
+import 'meal_detail_screen.dart';
+import 'package:hive/hive.dart';
+import '../models/eaten_food.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -19,13 +20,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _stepCount = 0;
-  int _lifestyleScore = 0; // ✅ 실제 생활 습관 점수 상태 변수 추가
+  int _lifestyleScore = 0;
   List<Workout> _workouts = [];
   final HealthService _healthService = HealthService();
   double _totalKcal = 0;
   double _carbRatio = 0;
   double _proteinRatio = 0;
   double _fatRatio = 0;
+  final Map<String, double> foodCountMap = {};
 
   @override
   void initState() {
@@ -33,28 +35,46 @@ class _HomeScreenState extends State<HomeScreen> {
     print('🛠 HomeScreen initState() 실행됨');
     AppData.maybeResetDailyData();
     _fetchHealthData();
+    _calculateMealStats();
   }
 
-  void _calculateMealStats() {
+  Future<void> _calculateMealStats() async {
+    setState(() {
+      _totalKcal = 0;
+      _carbRatio = 0;
+      _proteinRatio = 0;
+      _fatRatio = 0;
+    });
+
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final box = await Hive.openBox<List>('eatenFoods');
+    final mealTypes = ['BREAKFAST', 'LUNCH', 'DINNER', 'DESSERT'];
+
     double totalKcal = 0;
     double totalCarb = 0;
     double totalProtein = 0;
     double totalFat = 0;
 
-    AppData.meals.values.expand((mealList) => mealList).forEach((food) {
-      totalKcal += food['kcal'] ?? 0;
-      totalCarb += food['carbohydrate'] ?? 0;
-      totalProtein += food['protein'] ?? 0;
-      totalFat += food['fat'] ?? 0;
-    });
+    for (final type in mealTypes) {
+      final key = '$today|$type';
+      final storedList =
+          box.get(key, defaultValue: [])?.cast<EatenFood>() ?? [];
+
+      for (final item in storedList) {
+        totalKcal += item.kcal * item.count;
+        totalCarb += item.carbohydrate * item.count;
+        totalProtein += item.protein * item.count;
+        totalFat += item.fat * item.count;
+      }
+    }
 
     final totalMacro = totalCarb + totalProtein + totalFat;
 
     setState(() {
       _totalKcal = totalKcal;
-      _carbRatio = totalMacro > 0 ? (totalCarb / totalMacro) : 0;
-      _proteinRatio = totalMacro > 0 ? (totalProtein / totalMacro) : 0;
-      _fatRatio = totalMacro > 0 ? (totalFat / totalMacro) : 0;
+      _carbRatio = totalMacro > 0 ? totalCarb / totalMacro : 0;
+      _proteinRatio = totalMacro > 0 ? totalProtein / totalMacro : 0;
+      _fatRatio = totalMacro > 0 ? totalFat / totalMacro : 0;
     });
   }
 
@@ -70,54 +90,99 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     try {
-      print('🚀 fetchTodayWorkouts() 실행 전');
-      final workouts = await _healthService.fetchTodayWorkouts();
-      print('✅ fetchTodayWorkouts() 완료');
-
-      print('🚶‍♂️ fetchTodaySteps() 실행 전');
-      final steps = await _healthService.fetchTodaySteps();
-      print('✅ fetchTodaySteps() 완료');
-
-      // ✅ lifestyle 점수 API 호출
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('accessToken') ?? '';
+      print('🔑 액세스 토큰: $token');
 
-      final profileRes = await http.get(
-        Uri.parse('http://localhost:8080/v1/members/me'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      final dateStr = DateFormat('yyyy-MM-dd').format(yesterday);
+      print('📅 어제 날짜: $dateStr');
+
+      final url = Uri.parse('http://localhost:8080/health/report/scores');
+      final client = http.Client();
+
+      final request = http.Request('GET', url)
+        ..headers.addAll({
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        })
+        ..body = jsonEncode({
+          'start': dateStr,
+          'end': dateStr,
+        });
+
+      print('🚀 점수 API 요청 전 (GET + body)');
+      print('📦 URL: $url');
+      print('📦 Headers: ${request.headers}');
+      print('📦 Body: ${request.body}');
+
+      final streamedResponse = await client.send(request);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print('📥 점수 응답 상태 코드: ${response.statusCode}');
+      print('📥 응답 본문: ${utf8.decode(response.bodyBytes)}');
 
       int score = 0;
-      if (profileRes.statusCode == 200) {
-        final profileData = jsonDecode(utf8.decode(profileRes.bodyBytes));
-        score = profileData['lifestyleScore'] ?? 0; // ✅ 실제 키에 따라 변경 가능
-        print('📊 lifestyleScore: $score');
+      if (response.statusCode == 200) {
+        final responseJson = jsonDecode(utf8.decode(response.bodyBytes));
+        final scores = responseJson['scores'] as List<dynamic>;
+        if (scores.isNotEmpty && scores[0]['healthLifeScore'] != null) {
+          score = scores[0]['healthLifeScore'];
+          print('✅ 점수 추출 성공: $score');
+        } else {
+          print('⚠️ 점수 항목 없음 또는 비어있음');
+        }
       } else {
-        print('❌ 프로필 API 호출 실패: ${profileRes.statusCode}');
+        print('❌ 점수 API 호출 실패');
       }
+
+      final workouts = await _healthService.fetchTodayWorkouts();
+      final steps = await _healthService.fetchTodaySteps();
 
       setState(() {
         _workouts = workouts;
         _stepCount = steps;
-        _lifestyleScore = score; // ✅ 점수 상태에 반영
-        print('🟢 setState 실행됨. steps = $steps → _stepCount = $_stepCount');
+        _lifestyleScore = score;
+        print('🟢 setState 실행됨. steps = $steps, score = $_lifestyleScore');
       });
     } catch (e, stack) {
-      print('❌ 오류 발생: $e');
+      print('❌ 예외 발생: $e');
       print(stack);
     }
   }
 
-        // ✅ 이 함수만 남기고
   void _editMeal(String meal) async {
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => MealFoodScreen(mealType: meal)),
     );
     setState(() {
-      _calculateMealStats(); // 식사 수정 후 다시 계산
+      _calculateMealStats();
     });
-  } 
+  }
+
+  Future<Map<String, List<EatenFood>>> _loadMealsFromHive() async {
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final box = await Hive.openBox<List>('eatenFoods');
+
+    final mealTypes = {
+      '아침': 'BREAKFAST',
+      '점심': 'LUNCH',
+      '저녁': 'DINNER',
+      '간식': 'DESSERT',
+    };
+
+    Map<String, List<EatenFood>> result = {};
+
+    for (final entry in mealTypes.entries) {
+      final key = '$today|${entry.value}';
+      final rawList = box.get(key, defaultValue: []);
+      final list = rawList?.whereType<EatenFood>().toList() ?? [];
+      result[entry.key] = list;
+    }
+
+    return result;
+  }
 
   String formatWorkoutType(String rawType) {
     switch (rawType.toUpperCase()) {
@@ -145,7 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 24),
-        const Text('합계 운동 기록',
+        const Text('운동 기록',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         if (_workouts.isEmpty)
@@ -229,7 +294,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 260,
                       height: 260,
                       child: CircularProgressIndicator(
-                        value: _lifestyleScore / 100.0, // ✅ 점수 반영
+                        value: _lifestyleScore / 100.0,
                         strokeWidth: 30,
                         backgroundColor: Colors.grey.shade200,
                         valueColor:
@@ -240,15 +305,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          '$_lifestyleScore점', // ✅ 하드코딩 제거, 상태값 반영
+                          '$_lifestyleScore점',
                           style: const TextStyle(
                             fontSize: 36,
                             fontWeight: FontWeight.bold,
                             color: Colors.deepPurple,
                           ),
                         ),
-                        SizedBox(height: 4),
-                        Text(
+                        const SizedBox(height: 4),
+                        const Text(
                           '습관 점수',
                           style: TextStyle(fontSize: 18, color: Colors.black54),
                         ),
@@ -297,7 +362,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('${_totalKcal.toStringAsFixed(0)} kcal',
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                      style: const TextStyle(
+                          fontSize: 24, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -314,57 +380,71 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: AppData.meals.keys.map((meal) {
-                String emoji = '';
-                switch (meal) {
-                  case '아침':
-                    emoji = '🍳';
-                    break;
-                  case '점심':
-                    emoji = '☀️';
-                    break;
-                  case '저녁':
-                    emoji = '🌙';
-                    break;
-                  case '간식':
-                    emoji = '🍎';
-                    break;
+            FutureBuilder<Map<String, List<EatenFood>>>(
+              future: _loadMealsFromHive(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const CircularProgressIndicator();
                 }
-                return GestureDetector(
-                  onTap: () => _editMeal(meal),
-                  child: Container(
-                    width: MediaQuery.of(context).size.width / 4 - 24,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(emoji, style: const TextStyle(fontSize: 28)),
-                        const SizedBox(height: 8),
-                        Text(meal,
-                            style: const TextStyle(
-                                fontSize: 14, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        AppData.meals[meal]!.isEmpty
-                            ? const Icon(Icons.add,
-                                size: 20, color: Colors.grey)
-                            : Text(
-                                AppData.meals[meal]!
-                                    .map((f) => f['foodName'])
-                                    .join(', '),
-                                style: const TextStyle(fontSize: 12)),
-                      ],
-                    ),
-                  ),
+
+                final mealMap = snapshot.data!;
+                final mealOrder = ['아침', '점심', '저녁', '간식'];
+                final mealIcons = {
+                  '아침': '🍳',
+                  '점심': '☀️',
+                  '저녁': '🌙',
+                  '간식': '🍎'
+                };
+
+                return Column(
+                  children: mealOrder.map((meal) {
+                    final foods = mealMap[meal] ?? [];
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Text(mealIcons[meal]!,
+                                  style: const TextStyle(fontSize: 28)),
+                              const SizedBox(width: 12),
+                              Text(meal,
+                                  style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.search),
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        MealDetailScreen(mealType: meal),
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.add),
+                                onPressed: () => _editMeal(meal),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                 );
-              }).toList(),
+              },
             ),
             buildWorkoutSection(),
             const SizedBox(height: 80),
@@ -403,11 +483,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCountCard(
-      {required String title,
-      required int count,
-      required String unit,
-      required VoidCallback onIncrement}) {
+  Widget _buildCountCard({
+    required String title,
+    required int count,
+    required String unit,
+    required VoidCallback onIncrement,
+  }) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(12),
@@ -423,19 +504,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 style:
                     const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             IconButton(
-                icon: const Icon(Icons.add_circle_outline),
-                onPressed: onIncrement),
+              icon: const Icon(Icons.add_circle_outline),
+              onPressed: onIncrement,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatCard(
-      {required String title,
-      required String value,
-      required String unit,
-      required IconData icon}) {
+  Widget _buildStatCard({
+    required String title,
+    required String value,
+    required String unit,
+    required IconData icon,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),

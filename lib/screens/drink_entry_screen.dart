@@ -49,11 +49,11 @@ class _DrinkEntryScreenState extends State<DrinkEntryScreen> {
             child: GridView.builder(
               padding: const EdgeInsets.all(20),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 5, // 한 줄에 5개
+                crossAxisCount: 5,
                 mainAxisSpacing: 16,
                 crossAxisSpacing: 16,
               ),
-              itemCount: 30, // 총 30개 (5 x 6)
+              itemCount: 30,
               itemBuilder: (context, index) {
                 final isFilled = index < _count;
                 return GestureDetector(
@@ -75,8 +75,8 @@ class _DrinkEntryScreenState extends State<DrinkEntryScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  // TODO: 저장 로직
-                  Navigator.pop(context);
+                  // ✅ 카운트 값 반환
+                  Navigator.pop(context, _count);
                 },
                 child: const Text('확인'),
               ),

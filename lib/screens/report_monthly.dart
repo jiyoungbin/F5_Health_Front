@@ -87,13 +87,13 @@ class _ReportMonthlyState extends State<ReportMonthly> {
         final dateStr = DateFormat('yyyy-MM-dd').format(date);
 
         if (date.isAfter(now)) {
-          return FlSpot(dayIndex.toDouble(), double.nan); // 미래는 표시 안함
+          return FlSpot(dayIndex.toDouble(), double.nan);
         }
 
         final score = scoreMap[dateStr];
         return score != null
             ? FlSpot(dayIndex.toDouble(), score)
-            : FlSpot(dayIndex.toDouble(), double.nan); // 점/선 없음
+            : FlSpot(dayIndex.toDouble(), double.nan);
       });
 
       setState(() {
@@ -123,9 +123,13 @@ class _ReportMonthlyState extends State<ReportMonthly> {
     _loadMonthlyReport();
   }
 
+  bool _hasValidSpots() {
+    return spots.any((e) => !e.y.isNaN);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final lastDay = DateTime(selectedYear, selectedMonth + 1, 0).day;
+    //final lastDay = DateTime(selectedYear, selectedMonth + 1, 0).day;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -201,8 +205,8 @@ class _ReportMonthlyState extends State<ReportMonthly> {
               height: 280,
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : spots.isEmpty
-                      ? const Center(child: Text('데이터가 없습니다.'))
+                  : !_hasValidSpots()
+                      ? const Center(child: Text('이번 달 데이터가 없습니다.'))
                       : LineChart(
                           LineChartData(
                             minY: 0,
@@ -217,8 +221,7 @@ class _ReportMonthlyState extends State<ReportMonthly> {
                                 preventCurveOverShooting: true,
                                 dotData: FlDotData(
                                   show: true,
-                                  checkToShowDot: (spot, _) =>
-                                      !spot.y.isNaN, // NaN인 날은 점 없음
+                                  checkToShowDot: (spot, _) => !spot.y.isNaN,
                                 ),
                                 belowBarData: BarAreaData(show: false),
                               ),

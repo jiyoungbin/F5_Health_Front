@@ -180,63 +180,72 @@ class _ReportWeeklyState extends State<ReportWeekly> {
               height: 280,
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : spots.isEmpty
-                      ? const Center(child: Text('데이터가 없습니다.'))
-                      : LineChart(
-                          LineChartData(
-                            minY: 0,
-                            maxY: 100,
-                            lineBarsData: [
-                              LineChartBarData(
-                                spots: spots,
-                                isCurved: false,
-                                color: Colors.deepPurple,
-                                barWidth: 3,
-                                isStrokeCapRound: true,
-                                preventCurveOverShooting: true,
-                                dotData: FlDotData(
-                                  show: true,
-                                  checkToShowDot: (spot, _) =>
-                                      !spot.y.isNaN, // 점 없애기
-                                ),
-                                belowBarData: BarAreaData(show: false),
-                              ),
-                            ],
-                            titlesData: FlTitlesData(
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  interval: 1,
-                                  getTitlesWidget: (value, _) {
-                                    final i = value.toInt();
-                                    return Text(
-                                      i >= 0 && i < 7 ? days[i] : '',
-                                      style: const TextStyle(fontSize: 12),
-                                    );
-                                  },
-                                ),
-                              ),
-                              leftTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  interval: 20,
-                                  getTitlesWidget: (value, _) => Text(
-                                    "${value.toInt()}",
-                                    style: const TextStyle(fontSize: 12),
+                  : LineChart(
+                      LineChartData(
+                        minY: 0,
+                        maxY: 100,
+                        lineBarsData: spots.isEmpty
+                            ? []
+                            : [
+                                LineChartBarData(
+                                  spots: spots,
+                                  isCurved: false,
+                                  color: Colors.deepPurple,
+                                  barWidth: 3,
+                                  isStrokeCapRound: true,
+                                  preventCurveOverShooting: true,
+                                  dotData: FlDotData(
+                                    show: true,
+                                    checkToShowDot: (spot, _) => !spot.y.isNaN,
                                   ),
+                                  belowBarData: BarAreaData(show: false),
                                 ),
-                              ),
-                              topTitles: AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false)),
-                              rightTitles: AxisTitles(
-                                  sideTitles: SideTitles(showTitles: false)),
+                              ],
+                        titlesData: FlTitlesData(
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              interval: 1,
+                              getTitlesWidget: (value, _) {
+                                final i = value.toInt();
+                                return Text(
+                                  i >= 0 && i < 7 ? days[i] : '',
+                                  style: const TextStyle(fontSize: 12),
+                                );
+                              },
                             ),
-                            gridData: FlGridData(show: true),
-                            borderData: FlBorderData(show: true),
                           ),
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              interval: 20,
+                              getTitlesWidget: (value, _) => Text(
+                                "${value.toInt()}",
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          ),
+                          topTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
+                          rightTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false)),
                         ),
+                        gridData: FlGridData(show: true),
+                        borderData: FlBorderData(show: true),
+                      ),
+                    ),
             ),
           ),
+          if (!isLoading && spots.every((e) => e.y.isNaN))
+            const Padding(
+              padding: EdgeInsets.only(top: 16),
+              child: Center(
+                child: Text(
+                  '이번 주 데이터가 없습니다.',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ),
+            ),
         ],
       ),
     );
