@@ -49,12 +49,12 @@ class _MealFoodScreenState extends State<MealFoodScreen> {
   }
 
   Future<void> _loadSavedFoods() async {
-    final box = await Hive.openBox<List>('eatenFoods');
+    final box = Hive.box<List<EatenFood>>('mealFoodsBox');
     final key = _generateKey();
     final stored = box.get(key);
     if (stored != null) {
       setState(() {
-        _selectedFoods = List<EatenFood>.from(stored.cast<EatenFood>());
+        _selectedFoods = List<EatenFood>.from(stored);
       });
     }
   }
@@ -197,7 +197,7 @@ class _MealFoodScreenState extends State<MealFoodScreen> {
   }
 
   Future<void> _saveFoods() async {
-    final box = await Hive.openBox<List>('eatenFoods');
+    final box = Hive.box<List<EatenFood>>('mealFoodsBox');
     final key = _generateKey();
     await box.put(key, _selectedFoods);
     Navigator.pop(context, true);

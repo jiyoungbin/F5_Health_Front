@@ -3,7 +3,7 @@
     "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-
+    
     <!-- 1. 네이티브 앱 키 메타데이터 추가 -->
     <key>KAKAO_APP_KEY</key>
     <string>4926d9b83bfc6c66402f3d42d84b7f52</string>
@@ -22,6 +22,12 @@
             </array>
         </dict>
     </array>
+    
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
 
     <!-- Flutter Local Notifications 권한 설정 -->
     <key>UIBackgroundModes</key>

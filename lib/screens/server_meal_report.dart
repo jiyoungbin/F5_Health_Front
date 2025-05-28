@@ -28,9 +28,6 @@ class _MealDetailScreenServerState extends State<MealDetailScreenServer> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken') ?? '';
 
-    print('📅 요청 날짜: $dateStr');
-    print('🔑 Access Token: $token');
-
     final res = await http.get(
       Uri.parse('http://localhost:8080/health/report?date=$dateStr'),
       headers: {
@@ -39,34 +36,89 @@ class _MealDetailScreenServerState extends State<MealDetailScreenServer> {
       },
     );
 
-    print('🌐 상태 코드: ${res.statusCode}');
-    print('📥 응답 바디: ${res.body}');
-
     if (res.statusCode == 200 && res.body.isNotEmpty) {
       final decoded = jsonDecode(utf8.decode(res.bodyBytes));
+      final meals = decoded['mealsResponse']?['mealResponseList'];
       setState(() {
-        mealList = decoded['mealsResponse']?['mealResponseList'] ?? [];
+        mealList = meals ?? [];
       });
     }
   }
 
-  Widget _buildMealCard(dynamic meal) {
-    final Map<String, dynamic> mealMap = Map<String, dynamic>.from(meal);
-    final mealType = mealMap['mealTypeLabel'] ?? '-';
-    final mealFoods = (mealMap['mealFoodResponseList'] ?? []) as List;
-    final foods = mealFoods.map((e) => e['foodResponse']).toList();
+  Future<List<dynamic>> _fetchMealDetails(int mealId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('accessToken') ?? '';
+    final url = Uri.parse('http://localhost:8080/meal/$mealId');
 
-    print('🧾 불러온 식사: $mealType');
-    print('🥗 음식 목록: $foods');
+    final res = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
 
+    if (res.statusCode == 200 && res.body.isNotEmpty) {
+      final decoded = jsonDecode(utf8.decode(res.bodyBytes));
+      return decoded['mealFoodResponseList'] ?? [];
+    }
+
+    return [];
+  }
+
+  Widget _buildMealCard(String mealType, List<dynamic> mealList) {
     double totalCarb = 0;
     double totalProtein = 0;
     double totalFat = 0;
+    List<Widget> foodWidgets = [];
 
-    for (var food in foods) {
-      totalCarb += food['carbohydrate'] ?? 0.0;
-      totalProtein += food['protein'] ?? 0.0;
-      totalFat += food['fat'] ?? 0.0;
+    for (var meal in mealList) {
+      totalCarb += (meal['totalCarbohydrate'] ?? 0.0);
+      totalProtein += (meal['totalProtein'] ?? 0.0);
+      totalFat += (meal['totalFat'] ?? 0.0);
+
+      final mealFoods = meal['mealFoodResponseList'];
+
+      if (mealFoods == null) {
+        _fetchMealDetails(meal['mealId']).then((fetchedFoods) {
+          setState(() {
+            meal['mealFoodResponseList'] = fetchedFoods;
+          });
+        });
+        continue;
+      }
+
+      if (mealFoods is List) {
+        for (var mealFood in mealFoods) {
+          final food = mealFood['foodResponse'] ?? {};
+          final count = (mealFood['count'] ?? 1).toDouble();
+
+          final foodWeightStr = food['foodWeight'] ?? '100g';
+          final stdQuantityStr = food['nutritionContentStdQuantity'] ?? '100g';
+
+          final foodWeight = double.tryParse(foodWeightStr.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 100.0;
+          final stdQuantity = double.tryParse(stdQuantityStr.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 100.0;
+          final ratio = foodWeight / stdQuantity;
+
+          final kcal = (food['kcal'] ?? 0.0) * ratio * count;
+          final carb = (food['carbohydrate'] ?? 0.0) * ratio * count;
+          final protein = (food['protein'] ?? 0.0) * ratio * count;
+          final fat = (food['fat'] ?? 0.0) * ratio * count;
+
+          foodWidgets.add(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 12),
+                Text(food['foodName'] ?? '이름 없음',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 16)),
+                Text('(${count.toStringAsFixed(1)}인분) 탄 ${carb.toStringAsFixed(1)}g, 단 ${protein.toStringAsFixed(1)}g, 지 ${fat.toStringAsFixed(1)}g, 총칼로리: ${kcal.toStringAsFixed(1)}kcal')
+              ],
+            ),
+          );
+        }
+      }
     }
 
     return Card(
@@ -77,25 +129,16 @@ class _MealDetailScreenServerState extends State<MealDetailScreenServer> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('$mealType 총 영양정보',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Text('탄수화물: ${totalCarb.toStringAsFixed(1)}g'),
             Text('단백질: ${totalProtein.toStringAsFixed(1)}g'),
             Text('지방: ${totalFat.toStringAsFixed(1)}g'),
             const SizedBox(height: 8),
-            if (foods.isNotEmpty)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: foods.map<Widget>((food) {
-                  return ListTile(
-                    title: Text(food['foodName'] ?? '이름 없음'),
-                    subtitle: Text(
-                        '탄 ${food['carbohydrate']}g, 단 ${food['protein']}g, 지 ${food['fat']}g'),
-                  );
-                }).toList(),
-              )
-            else
-              const Text('기록된 음식 없음'),
+            foodWidgets.isNotEmpty
+                ? Column(children: foodWidgets)
+                : const Text('음식 상세 정보 없음'),
           ],
         ),
       ),
@@ -106,6 +149,19 @@ class _MealDetailScreenServerState extends State<MealDetailScreenServer> {
   Widget build(BuildContext context) {
     final dateStr = DateFormat('yyyy년 MM월 dd일').format(widget.date);
 
+    Map<String, List<dynamic>> groupedMeals = {
+      '아침': [],
+      '점심': [],
+      '저녁': [],
+      '간식': [],
+    };
+    for (var meal in mealList) {
+      final label = meal['mealTypeLabel'];
+      if (groupedMeals.containsKey(label)) {
+        groupedMeals[label]!.add(meal);
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text('$dateStr 식단 상세'),
@@ -114,7 +170,12 @@ class _MealDetailScreenServerState extends State<MealDetailScreenServer> {
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               padding: const EdgeInsets.all(16),
-              children: mealList.map<Widget>(_buildMealCard).toList(),
+              children: groupedMeals.entries
+                  .where((entry) => entry.value.isNotEmpty)
+                  .map<Widget>(
+                    (entry) => _buildMealCard(entry.key, entry.value),
+                  )
+                  .toList(),
             ),
     );
   }

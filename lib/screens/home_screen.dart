@@ -2,14 +2,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../app_data.dart';
 import '../services/health_service.dart';
 import '../models/workout.dart';
 import 'package:intl/intl.dart';
 import 'meal_food_screen.dart';
 import 'meal_detail_screen.dart';
 import 'package:hive/hive.dart';
-import '../models/eaten_food.dart';
+import '../models/eaten_food.dart'; // 식단 하이브
+import '../models/daily_record.dart'; // 음수량, 흡연량 하이브
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -19,8 +19,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _stepCount = 0;
-  int _lifestyleScore = 0;
+  int _stepCount = 0; // 추가
+  int _lifestyleScore = 0; // 추가
   List<Workout> _workouts = [];
   final HealthService _healthService = HealthService();
   double _totalKcal = 0;
@@ -29,13 +29,87 @@ class _HomeScreenState extends State<HomeScreen> {
   double _fatRatio = 0;
   final Map<String, double> foodCountMap = {};
 
+  int _waterCount = 0;
+  int _smokeCount = 0;
+
   @override
   void initState() {
     super.initState();
     print('🛠 HomeScreen initState() 실행됨');
-    AppData.maybeResetDailyData();
+    _loadDailyCounts(); // 추가
     _fetchHealthData();
     _calculateMealStats();
+  }
+
+  /// 오늘 날짜 키 계산
+  String get _todayKey => DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+  /// Hive에서 오늘의 water/smoke 카운트 불러오기
+  Future<void> _loadDailyCounts() async {
+    final box = Hive.box<DailyRecord>('dailyData');
+    final record =
+        box.get(_todayKey) ?? DailyRecord(waterCount: 0, smokeCount: 0);
+
+    setState(() {
+      _waterCount = record.waterCount;
+      _smokeCount = record.smokeCount;
+    });
+  }
+
+  /// 물 섭취량 1 증가 후 Hive에 저장
+  Future<void> _incrementWater() async {
+    final box = Hive.box<DailyRecord>('dailyData');
+    final record =
+        box.get(_todayKey) ?? DailyRecord(waterCount: 0, smokeCount: 0);
+
+    record.waterCount++;
+    await box.put(_todayKey, record);
+
+    setState(() {
+      _waterCount = record.waterCount;
+    });
+  }
+
+  // 1) 물 줄이기(_incrementWater 바로 아래)
+  Future<void> _decrementWater() async {
+    final box = Hive.box<DailyRecord>('dailyData');
+    final record =
+        box.get(_todayKey) ?? DailyRecord(waterCount: 0, smokeCount: 0);
+    if (record.waterCount > 0) {
+      record.waterCount--;
+      await box.put(_todayKey, record);
+    }
+    setState(() {
+      _waterCount = record.waterCount;
+    });
+  }
+
+  /// 흡연량 1 증가 후 Hive에 저장
+  Future<void> _incrementSmoke() async {
+    final box = Hive.box<DailyRecord>('dailyData');
+    final record =
+        box.get(_todayKey) ?? DailyRecord(waterCount: 0, smokeCount: 0);
+
+    record.smokeCount++;
+    await box.put(_todayKey, record);
+
+    setState(() {
+      _smokeCount = record.smokeCount;
+    });
+  }
+
+  // 2) 흡연량 줄이기(_incrementSmoke 바로 아래)
+  Future<void> _decrementSmoke() async {
+    final box = Hive.box<DailyRecord>('dailyData');
+    final record =
+        box.get(_todayKey) ?? DailyRecord(waterCount: 0, smokeCount: 0);
+    if (record.smokeCount > 0) {
+      record.smokeCount--;
+      await box.put(_todayKey, record);
+    }
+    setState(() {
+      _smokeCount = record.smokeCount;
+    });
   }
 
   Future<void> _calculateMealStats() async {
@@ -47,7 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final box = await Hive.openBox<List>('eatenFoods');
+    final box = Hive.box<List<EatenFood>>('mealFoodsBox');
     final mealTypes = ['BREAKFAST', 'LUNCH', 'DINNER', 'DESSERT'];
 
     double totalKcal = 0;
@@ -57,8 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     for (final type in mealTypes) {
       final key = '$today|$type';
-      final storedList =
-          box.get(key, defaultValue: [])?.cast<EatenFood>() ?? [];
+      final storedList = box.get(key, defaultValue: <EatenFood>[])!;
 
       for (final item in storedList) {
         totalKcal += item.kcal * item.count;
@@ -101,15 +174,13 @@ class _HomeScreenState extends State<HomeScreen> {
       final url = Uri.parse('http://localhost:8080/health/report/scores');
       final client = http.Client();
 
-      final request = http.Request('GET', url)
-        ..headers.addAll({
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        })
-        ..body = jsonEncode({
-          'start': dateStr,
-          'end': dateStr,
-        });
+      final request =
+          http.Request('GET', url)
+            ..headers.addAll({
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            })
+            ..body = jsonEncode({'start': dateStr, 'end': dateStr});
 
       print('🚀 점수 API 요청 전 (GET + body)');
       print('📦 URL: $url');
@@ -163,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<Map<String, List<EatenFood>>> _loadMealsFromHive() async {
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final box = await Hive.openBox<List>('eatenFoods');
+    final box = Hive.box<List<EatenFood>>('mealFoodsBox');
 
     final mealTypes = {
       '아침': 'BREAKFAST',
@@ -176,8 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     for (final entry in mealTypes.entries) {
       final key = '$today|${entry.value}';
-      final rawList = box.get(key, defaultValue: []);
-      final list = rawList?.whereType<EatenFood>().toList() ?? [];
+      final list = box.get(key, defaultValue: <EatenFood>[])!;
       result[entry.key] = list;
     }
 
@@ -210,37 +280,44 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 24),
-        const Text('운동 기록',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const Text(
+          '운동 기록',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 8),
         if (_workouts.isEmpty)
           const Text('운동 기록이 없습니다.', style: TextStyle(color: Colors.grey))
         else
           Column(
-            children: _workouts.map((w) {
-              final formattedStart = DateFormat.yMd().add_jm().format(w.start);
-              final formattedEnd = DateFormat.yMd().add_jm().format(w.end);
+            children:
+                _workouts.map((w) {
+                  final formattedStart = DateFormat.yMd().add_jm().format(
+                    w.start,
+                  );
+                  final formattedEnd = DateFormat.yMd().add_jm().format(w.end);
 
-              return Container(
-                margin: const EdgeInsets.symmetric(vertical: 6),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('운동 종류: ${formatWorkoutType(w.exerciseType)}'),
-                    Text('시작: $formattedStart'),
-                    Text('종료: $formattedEnd'),
-                    Text(w.calories >= 0
-                        ? '칼로리: ${w.calories.toStringAsFixed(1)} kcal'
-                        : '칼로리: 정보 없음'),
-                  ],
-                ),
-              );
-            }).toList(),
+                  return Container(
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('운동 종류: ${formatWorkoutType(w.exerciseType)}'),
+                        Text('시작: $formattedStart'),
+                        Text('종료: $formattedEnd'),
+                        Text(
+                          w.calories >= 0
+                              ? '칼로리: ${w.calories.toStringAsFixed(1)} kcal'
+                              : '칼로리: 정보 없음',
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
           ),
       ],
     );
@@ -297,8 +374,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         value: _lifestyleScore / 100.0,
                         strokeWidth: 30,
                         backgroundColor: Colors.grey.shade200,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(Colors.deepPurple),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.deepPurple,
+                        ),
                       ),
                     ),
                     Column(
@@ -328,16 +406,18 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 _buildCountCard(
                   title: '음수량',
-                  count: AppData.waterCount,
+                  count: _waterCount,
                   unit: '잔',
-                  onIncrement: () => setState(() => AppData.waterCount++),
+                  onIncrement: _incrementWater,
+                  onDecrement: _decrementWater,
                 ),
                 const SizedBox(width: 12),
                 _buildCountCard(
                   title: '흡연량',
-                  count: AppData.smokeCount,
+                  count: _smokeCount,
                   unit: '개비',
-                  onIncrement: () => setState(() => AppData.smokeCount++),
+                  onIncrement: _incrementSmoke,
+                  onDecrement: _decrementSmoke,
                 ),
               ],
             ),
@@ -349,8 +429,10 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icons.directions_walk,
             ),
             const SizedBox(height: 32),
-            const Text('식단',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              '식단',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(16),
@@ -361,19 +443,29 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${_totalKcal.toStringAsFixed(0)} kcal',
-                      style: const TextStyle(
-                          fontSize: 24, fontWeight: FontWeight.bold)),
+                  Text(
+                    '${_totalKcal.toStringAsFixed(0)} kcal',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('탄 ${(100 * _carbRatio).toStringAsFixed(0)}%',
-                          style: const TextStyle(color: Colors.deepPurple)),
-                      Text('단 ${(100 * _proteinRatio).toStringAsFixed(0)}%',
-                          style: const TextStyle(color: Colors.blue)),
-                      Text('지 ${(100 * _fatRatio).toStringAsFixed(0)}%',
-                          style: const TextStyle(color: Colors.teal)),
+                      Text(
+                        '탄 ${(100 * _carbRatio).toStringAsFixed(0)}%',
+                        style: const TextStyle(color: Colors.deepPurple),
+                      ),
+                      Text(
+                        '단 ${(100 * _proteinRatio).toStringAsFixed(0)}%',
+                        style: const TextStyle(color: Colors.blue),
+                      ),
+                      Text(
+                        '지 ${(100 * _fatRatio).toStringAsFixed(0)}%',
+                        style: const TextStyle(color: Colors.teal),
+                      ),
                     ],
                   ),
                 ],
@@ -387,62 +479,68 @@ class _HomeScreenState extends State<HomeScreen> {
                   return const CircularProgressIndicator();
                 }
 
-                final mealMap = snapshot.data!;
                 final mealOrder = ['아침', '점심', '저녁', '간식'];
                 final mealIcons = {
                   '아침': '🍳',
                   '점심': '☀️',
                   '저녁': '🌙',
-                  '간식': '🍎'
+                  '간식': '🍎',
                 };
 
                 return Column(
-                  children: mealOrder.map((meal) {
-                    final foods = mealMap[meal] ?? [];
-
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Text(mealIcons[meal]!,
-                                  style: const TextStyle(fontSize: 28)),
-                              const SizedBox(width: 12),
-                              Text(meal,
-                                  style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold)),
-                            ],
+                  children:
+                      mealOrder.map((meal) {
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          Row(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              IconButton(
-                                icon: const Icon(Icons.search),
-                                onPressed: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        MealDetailScreen(mealType: meal),
+                              Row(
+                                children: [
+                                  Text(
+                                    mealIcons[meal]!,
+                                    style: const TextStyle(fontSize: 28),
                                   ),
-                                ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    meal,
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.add),
-                                onPressed: () => _editMeal(meal),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.search),
+                                    onPressed:
+                                        () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder:
+                                                (_) => MealDetailScreen(
+                                                  mealType: meal,
+                                                ),
+                                          ),
+                                        ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.add),
+                                    onPressed: () => _editMeal(meal),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+                        );
+                      }).toList(),
                 );
               },
             ),
@@ -488,6 +586,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required int count,
     required String unit,
     required VoidCallback onIncrement,
+    required VoidCallback onDecrement,
   }) {
     return Expanded(
       child: Container(
@@ -500,12 +599,28 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(title, style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 8),
-            Text('$count $unit',
-                style:
-                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              onPressed: onIncrement,
+            Text(
+              '$count $unit',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.remove_circle_outline,
+                    color: Colors.red,
+                  ),
+                  onPressed: onDecrement, // ← 추가
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.add_circle_outline,
+                    color: Colors.green,
+                  ),
+                  onPressed: onIncrement,
+                ),
+              ],
             ),
           ],
         ),
@@ -534,9 +649,13 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title),
-              Text('$value $unit',
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(
+                '$value $unit',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         ],

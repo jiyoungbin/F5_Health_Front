@@ -39,13 +39,13 @@ class _MealDetailScreenState extends State<MealDetailScreen> {
   }
 
   Future<void> _loadMealData() async {
-    final box = await Hive.openBox<List>('eatenFoods');
+    final box = Hive.box<List<EatenFood>>('mealFoodsBox');
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final mealTypeEnum = _getMealTypeEnum(selectedMeal);
     final key = '$today|$mealTypeEnum';
 
-    final storedList = box.get(key, defaultValue: []) ?? [];
-    final newEatenFoods = List<EatenFood>.from(storedList.cast<EatenFood>());
+    final storedList = box.get(key, defaultValue: <EatenFood>[])!;
+    final newEatenFoods = List<EatenFood>.from(storedList);
 
     setState(() {
       eatenFoods = newEatenFoods;

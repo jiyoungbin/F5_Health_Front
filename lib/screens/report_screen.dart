@@ -1,4 +1,4 @@
-// ✅ 수정된 report_screen.dart — ReportDaily가 selectedDate만 받도록 변경 + named parameter 오류 제거
+// Flutter 메인 리포트 화면 - 선택된 리포트만 올라오고 전환 시 기존 리포트는 내려감
 import 'package:flutter/material.dart';
 import '../screens/report_daily.dart';
 import '../screens/report_weekly.dart';
@@ -19,7 +19,56 @@ class _ReportScreenState extends State<ReportScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("리포트")),
-      body: _buildPageContent(),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildSelectableReportBox("일간", Icons.today),
+                _buildSelectableReportBox("주간", Icons.calendar_today),
+                _buildSelectableReportBox("월간", Icons.calendar_month),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                return SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 1),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
+                );
+              },
+              child: selectedPage == "main"
+                  ? const SizedBox()
+                  : Container(
+                      key: ValueKey(selectedPage),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(24)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 10,
+                            offset: Offset(0, -2),
+                          )
+                        ],
+                      ),
+                      child: _buildPageContent(),
+                    ),
+            ),
+          ),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 3,
         onTap: (i) {
@@ -61,50 +110,48 @@ class _ReportScreenState extends State<ReportScreen> {
         );
       case "주간":
         return ReportWeekly(
-            onBack: () => setState(() => selectedPage = "main"));
+          onBack: () => setState(() => selectedPage = "main"),
+        );
       case "월간":
         return ReportMonthly(
-            onBack: () => setState(() => selectedPage = "main"));
+          onBack: () => setState(() => selectedPage = "main"),
+        );
       default:
-        return _buildMainReport();
+        return const SizedBox();
     }
   }
 
-  Widget _buildMainReport() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildSelectableReportBox("일간", Icons.today),
-            _buildSelectableReportBox("주간", Icons.calendar_today),
-            _buildSelectableReportBox("월간", Icons.calendar_month),
-          ],
-        ),
-        const SizedBox(height: 24),
-        const Center(child: Text("리포트를 선택하세요")),
-      ],
-    );
-  }
-
   Widget _buildSelectableReportBox(String title, IconData icon) {
+    final isSelected = selectedPage == title;
     return GestureDetector(
-      onTap: () => setState(() => selectedPage = title),
+      onTap: () {
+        if (selectedPage != title) {
+          setState(() => selectedPage = title);
+        }
+      },
       child: Container(
-        width: 100,
-        height: 100,
+        width: 90,
+        height: 90,
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey),
-          borderRadius: BorderRadius.circular(12),
+          color: isSelected ? Colors.deepPurple.shade100 : Colors.white,
+          border: Border.all(
+              color: isSelected ? Colors.deepPurple : Colors.grey),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.grey, size: 36),
-            const SizedBox(height: 8),
-            Text(title, style: const TextStyle(color: Colors.black)),
+            Icon(icon,
+                color: isSelected ? Colors.deepPurple : Colors.grey, size: 30),
+            const SizedBox(height: 6),
+            Text(
+              title,
+              style: TextStyle(
+                color: isSelected ? Colors.deepPurple : Colors.black,
+                fontWeight:
+                    isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
           ],
         ),
       ),
