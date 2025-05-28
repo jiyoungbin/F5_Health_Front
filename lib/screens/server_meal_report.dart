@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config.dart';
 
 class MealDetailScreenServer extends StatefulWidget {
   final DateTime date;
@@ -29,7 +30,7 @@ class _MealDetailScreenServerState extends State<MealDetailScreenServer> {
     final token = prefs.getString('accessToken') ?? '';
 
     final res = await http.get(
-      Uri.parse('http://localhost:8080/health/report?date=$dateStr'),
+      Uri.parse('${Config.baseUrl}/health/report?date=$dateStr'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -48,7 +49,7 @@ class _MealDetailScreenServerState extends State<MealDetailScreenServer> {
   Future<List<dynamic>> _fetchMealDetails(int mealId) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken') ?? '';
-    final url = Uri.parse('http://localhost:8080/meal/$mealId');
+    final url = Uri.parse('${Config.baseUrl}/meal/$mealId');
 
     final res = await http.get(
       url,
@@ -96,8 +97,16 @@ class _MealDetailScreenServerState extends State<MealDetailScreenServer> {
           final foodWeightStr = food['foodWeight'] ?? '100g';
           final stdQuantityStr = food['nutritionContentStdQuantity'] ?? '100g';
 
-          final foodWeight = double.tryParse(foodWeightStr.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 100.0;
-          final stdQuantity = double.tryParse(stdQuantityStr.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 100.0;
+          final foodWeight =
+              double.tryParse(
+                foodWeightStr.replaceAll(RegExp(r'[^0-9.]'), ''),
+              ) ??
+              100.0;
+          final stdQuantity =
+              double.tryParse(
+                stdQuantityStr.replaceAll(RegExp(r'[^0-9.]'), ''),
+              ) ??
+              100.0;
           final ratio = foodWeight / stdQuantity;
 
           final kcal = (food['kcal'] ?? 0.0) * ratio * count;
@@ -110,10 +119,16 @@ class _MealDetailScreenServerState extends State<MealDetailScreenServer> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 12),
-                Text(food['foodName'] ?? '이름 없음',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 16)),
-                Text('(${count.toStringAsFixed(1)}인분) 탄 ${carb.toStringAsFixed(1)}g, 단 ${protein.toStringAsFixed(1)}g, 지 ${fat.toStringAsFixed(1)}g, 총칼로리: ${kcal.toStringAsFixed(1)}kcal')
+                Text(
+                  food['foodName'] ?? '이름 없음',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  '(${count.toStringAsFixed(1)}인분) 탄 ${carb.toStringAsFixed(1)}g, 단 ${protein.toStringAsFixed(1)}g, 지 ${fat.toStringAsFixed(1)}g, 총칼로리: ${kcal.toStringAsFixed(1)}kcal',
+                ),
               ],
             ),
           );
@@ -128,9 +143,10 @@ class _MealDetailScreenServerState extends State<MealDetailScreenServer> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('$mealType 총 영양정보',
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              '$mealType 총 영양정보',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             Text('탄수화물: ${totalCarb.toStringAsFixed(1)}g'),
             Text('단백질: ${totalProtein.toStringAsFixed(1)}g'),
@@ -163,20 +179,20 @@ class _MealDetailScreenServerState extends State<MealDetailScreenServer> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('$dateStr 식단 상세'),
-      ),
-      body: mealList.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: groupedMeals.entries
-                  .where((entry) => entry.value.isNotEmpty)
-                  .map<Widget>(
-                    (entry) => _buildMealCard(entry.key, entry.value),
-                  )
-                  .toList(),
-            ),
+      appBar: AppBar(title: Text('$dateStr 식단 상세')),
+      body:
+          mealList.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : ListView(
+                padding: const EdgeInsets.all(16),
+                children:
+                    groupedMeals.entries
+                        .where((entry) => entry.value.isNotEmpty)
+                        .map<Widget>(
+                          (entry) => _buildMealCard(entry.key, entry.value),
+                        )
+                        .toList(),
+              ),
     );
   }
 }

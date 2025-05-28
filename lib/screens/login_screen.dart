@@ -8,6 +8,7 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/health_service.dart'; // ✅ 헬스 서비스 import
+import '../config.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -43,14 +44,11 @@ class LoginScreen extends StatelessWidget {
 
       final loginPayload = {
         'accessToken': accessToken,
-        'deviceInfo': {
-          'udid': udid,
-          'os': os,
-        }
+        'deviceInfo': {'udid': udid, 'os': os},
       };
 
       final signinRes = await http.post(
-        Uri.parse('http://localhost:8080/signin/oauth2/kakao'),
+        Uri.parse('${Config.baseUrl}/signin/oauth2/kakao'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(loginPayload),
       );
@@ -58,22 +56,21 @@ class LoginScreen extends StatelessWidget {
       debugPrint('📡 signin 응답 코드: ${signinRes.statusCode}');
       debugPrint('📦 signin 응답 바디: ${signinRes.body}');
 
-     if (signinRes.statusCode == 200) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', true);
+      if (signinRes.statusCode == 200) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('isLoggedIn', true);
 
- // ✅ 서버 응답에서 JWT accessToken 파싱
-      final decoded = jsonDecode(signinRes.body);
-      final serverAccessToken = decoded['tokenResponse']['accessToken'];
+        // ✅ 서버 응답에서 JWT accessToken 파싱
+        final decoded = jsonDecode(signinRes.body);
+        final serverAccessToken = decoded['tokenResponse']['accessToken'];
 
-      if (serverAccessToken == null || !serverAccessToken.contains('.')) {
-        debugPrint('❌ 서버 accessToken이 유효하지 않음');
-        return;
-      }
+        if (serverAccessToken == null || !serverAccessToken.contains('.')) {
+          debugPrint('❌ 서버 accessToken이 유효하지 않음');
+          return;
+        }
 
-  // ✅ 서버 accessToken 저장 (카카오 accessToken 아님!)
-  await prefs.setString('accessToken', serverAccessToken);
-
+        // ✅ 서버 accessToken 저장 (카카오 accessToken 아님!)
+        await prefs.setString('accessToken', serverAccessToken);
 
         // ✅ HealthKit 권한 요청
         final healthService = HealthService();
@@ -98,9 +95,9 @@ class LoginScreen extends StatelessWidget {
 
       if (!context.mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('카카오 로그인에 실패했습니다.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('카카오 로그인에 실패했습니다.')));
     }
   }
 
@@ -142,7 +139,6 @@ class LoginScreen extends StatelessWidget {
     );
   }
 }
-
 
 /*
 import 'dart:convert';
@@ -198,7 +194,7 @@ class LoginScreen extends StatelessWidget {
       // 로그인 API 호출
       final signinRes = await http.post(
         Uri.parse(
-            'http://localhost:8080/signin/oauth2/kakao'), // 실제 서버 주소로 변경 필요
+            '${Config.baseUrl}/signin/oauth2/kakao'), // 실제 서버 주소로 변경 필요
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(loginPayload),
       );
@@ -227,7 +223,7 @@ class LoginScreen extends StatelessWidget {
 
         final signupRes = await http.post(
           Uri.parse(
-              'http://localhost:8080/signup/oauth2/kakao'), // 실제 서버 주소로 변경 필요
+              '${Config.baseUrl}/signup/oauth2/kakao'), // 실제 서버 주소로 변경 필요
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode(signupPayload),
         );

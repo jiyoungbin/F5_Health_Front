@@ -4,6 +4,7 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config.dart';
 
 class ReportMonthly extends StatefulWidget {
   final VoidCallback onBack;
@@ -47,7 +48,7 @@ class _ReportMonthlyState extends State<ReportMonthly> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken') ?? '';
 
-    final url = Uri.parse('http://localhost:8080/health/report/scores');
+    final url = Uri.parse('${Config.baseUrl}/health/report/scores');
     final client = http.Client();
     final request =
         http.Request('GET', url)
@@ -172,16 +173,16 @@ class _ReportMonthlyState extends State<ReportMonthly> {
                       : !_hasData
                       ? const Center(child: Text('이번 달 데이터가 없습니다.'))
                       : SfCartesianChart(
-                        margin: const EdgeInsets.only(bottom: 30),
+                        margin: const EdgeInsets.only(bottom: 50),
                         tooltipBehavior: TooltipBehavior(enable: true),
                         primaryXAxis: CategoryAxis(
-                          labelStyle: const TextStyle(fontSize: 12),
+                          labelStyle: const TextStyle(fontSize: 10),
                         ),
                         primaryYAxis: NumericAxis(
                           minimum: 0,
                           maximum: 100,
                           interval: 20,
-                          labelStyle: const TextStyle(fontSize: 12),
+                          labelStyle: const TextStyle(fontSize: 10),
                         ),
                         series: <LineSeries<ChartData, String>>[
                           LineSeries<ChartData, String>(
@@ -273,7 +274,7 @@ class _ReportMonthlyState extends State<ReportMonthly> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken') ?? '';
 
-    final url = Uri.parse('http://localhost:8080/health/report/scores');
+    final url = Uri.parse('${Config.baseUrl}/health/report/scores');
     final client = http.Client();
 
     final request = http.Request('GET', url)

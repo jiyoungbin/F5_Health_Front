@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 
 import '../models/eaten_food.dart';
+import '../config.dart';
 
 class MealFoodScreen extends StatefulWidget {
   final String mealType; // '아침', '점심', '저녁', '간식'
@@ -67,10 +68,13 @@ class _MealFoodScreenState extends State<MealFoodScreen> {
     if (accessToken == null) return;
 
     final url = Uri.parse(
-        'http://localhost:8080/foods/search?foodSearchQuery=${Uri.encodeQueryComponent(query)}');
+      '${Config.baseUrl}/foods/search?foodSearchQuery=${Uri.encodeQueryComponent(query)}',
+    );
 
-    final res =
-        await http.get(url, headers: {'Authorization': 'Bearer $accessToken'});
+    final res = await http.get(
+      url,
+      headers: {'Authorization': 'Bearer $accessToken'},
+    );
 
     if (res.statusCode == 200) {
       final data = jsonDecode(utf8.decode(res.bodyBytes));
@@ -96,66 +100,70 @@ class _MealFoodScreenState extends State<MealFoodScreen> {
 
     await showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, localSetState) {
-          return AlertDialog(
-            title: Text('${food['foodName']} 섭취량 설정'),
-            content: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.remove),
-                  onPressed: () {
-                    localSetState(() {
-                      if (servingCount > 0.5) servingCount -= 0.5;
-                    });
-                  },
+      builder:
+          (context) => StatefulBuilder(
+            builder: (context, localSetState) {
+              return AlertDialog(
+                title: Text('${food['foodName']} 섭취량 설정'),
+                content: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove),
+                      onPressed: () {
+                        localSetState(() {
+                          if (servingCount > 0.5) servingCount -= 0.5;
+                        });
+                      },
+                    ),
+                    Text('${servingCount.toStringAsFixed(1)} 인분'),
+                    IconButton(
+                      icon: const Icon(Icons.add),
+                      onPressed: () {
+                        localSetState(() {
+                          servingCount += 0.5;
+                        });
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.search),
+                      tooltip: '상세보기',
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        await _showFoodDetail(food['foodCode']);
+                      },
+                    ),
+                  ],
                 ),
-                Text('${servingCount.toStringAsFixed(1)} 인분'),
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: () {
-                    localSetState(() {
-                      servingCount += 0.5;
-                    });
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.search),
-                  tooltip: '상세보기',
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    await _showFoodDetail(food['foodCode']);
-                  },
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('취소')),
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _selectedFoods.add(EatenFood(
-                      foodCode: food['foodCode'],
-                      foodName: food['foodName'],
-                      count: servingCount,
-                      kcal: (food['kcal'] ?? 0).toDouble() * ratio,
-                      carbohydrate:
-                          (food['carbohydrate'] ?? 0).toDouble() * ratio,
-                      protein: (food['protein'] ?? 0).toDouble() * ratio,
-                      fat: (food['fat'] ?? 0).toDouble() * ratio,
-                    ));
-                  });
-                  Navigator.pop(context);
-                },
-                child: const Text('추가'),
-              ),
-            ],
-          );
-        },
-      ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('취소'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedFoods.add(
+                          EatenFood(
+                            foodCode: food['foodCode'],
+                            foodName: food['foodName'],
+                            count: servingCount,
+                            kcal: (food['kcal'] ?? 0).toDouble() * ratio,
+                            carbohydrate:
+                                (food['carbohydrate'] ?? 0).toDouble() * ratio,
+                            protein: (food['protein'] ?? 0).toDouble() * ratio,
+                            fat: (food['fat'] ?? 0).toDouble() * ratio,
+                          ),
+                        );
+                      });
+                      Navigator.pop(context);
+                    },
+                    child: const Text('추가'),
+                  ),
+                ],
+              );
+            },
+          ),
     );
   }
 
@@ -164,34 +172,39 @@ class _MealFoodScreenState extends State<MealFoodScreen> {
     final token = prefs.getString('accessToken');
     if (token == null) return;
 
-    final url = Uri.parse('http://localhost:8080/foods/$foodCode');
-    final res =
-        await http.get(url, headers: {'Authorization': 'Bearer $token'});
+    final url = Uri.parse('${Config.baseUrl}/foods/$foodCode');
+    final res = await http.get(
+      url,
+      headers: {'Authorization': 'Bearer $token'},
+    );
 
     if (res.statusCode == 200) {
       final food = jsonDecode(utf8.decode(res.bodyBytes));
       showDialog(
         context: context,
-        builder: (_) => AlertDialog(
-          title: Text(food['foodName']),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                  '📌 아래 영양정보는 ${food['nutritionContentStdQuantity'] ?? '100g'} 기준입니다.',
-                  style: const TextStyle(fontSize: 13, color: Colors.grey)),
-              Text('열량: ${food['kcal']} kcal'),
-              Text('탄수화물: ${food['carbohydrate']}g'),
-              Text('단백질: ${food['protein']}g'),
-              Text('지방: ${food['fat']}g'),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('닫기')),
-          ],
-        ),
+        builder:
+            (_) => AlertDialog(
+              title: Text(food['foodName']),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '📌 아래 영양정보는 ${food['nutritionContentStdQuantity'] ?? '100g'} 기준입니다.',
+                    style: const TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                  Text('열량: ${food['kcal']} kcal'),
+                  Text('탄수화물: ${food['carbohydrate']}g'),
+                  Text('단백질: ${food['protein']}g'),
+                  Text('지방: ${food['fat']}g'),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('닫기'),
+                ),
+              ],
+            ),
       );
     }
   }
@@ -218,7 +231,7 @@ class _MealFoodScreenState extends State<MealFoodScreen> {
           TextButton(
             onPressed: _saveFoods,
             child: const Text('완료', style: TextStyle(color: Colors.white)),
-          )
+          ),
         ],
       ),
       body: Column(
@@ -231,27 +244,29 @@ class _MealFoodScreenState extends State<MealFoodScreen> {
               decoration: InputDecoration(
                 hintText: '음식 이름 검색',
                 prefixIcon: const Icon(Icons.search),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
           Expanded(
             flex: 2,
-            child: _searchResults.isEmpty
-                ? const Center(child: Text('검색 결과가 없습니다.'))
-                : ListView.builder(
-                    itemCount: _searchResults.length,
-                    itemBuilder: (_, index) {
-                      final food = _searchResults[index];
-                      return ListTile(
-                        title: Text(food['foodName']),
-                        subtitle: Text('${food['kcal']} kcal'),
-                        trailing: const Icon(Icons.add),
-                        onTap: () => _showAmountDialog(food),
-                      );
-                    },
-                  ),
+            child:
+                _searchResults.isEmpty
+                    ? const Center(child: Text('검색 결과가 없습니다.'))
+                    : ListView.builder(
+                      itemCount: _searchResults.length,
+                      itemBuilder: (_, index) {
+                        final food = _searchResults[index];
+                        return ListTile(
+                          title: Text(food['foodName']),
+                          subtitle: Text('${food['kcal']} kcal'),
+                          trailing: const Icon(Icons.add),
+                          onTap: () => _showAmountDialog(food),
+                        );
+                      },
+                    ),
           ),
           Expanded(
             flex: 1,
@@ -261,9 +276,10 @@ class _MealFoodScreenState extends State<MealFoodScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('✅ 선택한 음식',
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const Text(
+                    '✅ 선택한 음식',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                   const SizedBox(height: 8),
                   Expanded(
                     child: ListView.builder(
@@ -275,18 +291,21 @@ class _MealFoodScreenState extends State<MealFoodScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                  '• ${f.foodName} (${f.count}인분, ${(f.kcal * f.count).toStringAsFixed(0)}kcal)'),
+                                '• ${f.foodName} (${f.count}인분, ${(f.kcal * f.count).toStringAsFixed(0)}kcal)',
+                              ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.delete_outline,
-                                  color: Colors.red),
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                color: Colors.red,
+                              ),
                               onPressed: () => _removeFood(f.foodCode),
-                            )
+                            ),
                           ],
                         );
                       },
                     ),
-                  )
+                  ),
                 ],
               ),
             ),

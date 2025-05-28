@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config.dart';
 
 enum Gender { MALE, FEMALE }
 
@@ -46,16 +47,16 @@ class _SurveyScreenState extends State<SurveyScreen> {
   int? _selExercise;
 
   List<Widget> get _pages => [
-        _buildGenderQuestion(),
-        _buildBirthDateQuestion(),
-        _buildHeightQuestion(),
-        _buildWeightQuestion(),
-        _buildBloodTypeQuestion(),
-        _buildSmokingQuestion(),
-        _buildAlcoholQuestion(),
-        _buildExerciseQuestion(),
-        _buildAlarmTimeQuestion(),
-      ];
+    _buildGenderQuestion(),
+    _buildBirthDateQuestion(),
+    _buildHeightQuestion(),
+    _buildWeightQuestion(),
+    _buildBloodTypeQuestion(),
+    _buildSmokingQuestion(),
+    _buildAlcoholQuestion(),
+    _buildExerciseQuestion(),
+    _buildAlarmTimeQuestion(),
+  ];
 
   @override
   void didChangeDependencies() {
@@ -68,9 +69,9 @@ class _SurveyScreenState extends State<SurveyScreen> {
   void _goNext() {
     final key = _questionKeys[_currentPage];
     if (_answers[key] == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('값을 선택하고 확인을 눌러주세요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('값을 선택하고 확인을 눌러주세요.')));
       return;
     }
     if (_currentPage < _pages.length - 1) {
@@ -89,7 +90,7 @@ class _SurveyScreenState extends State<SurveyScreen> {
     debugPrint('📤 payload: ${jsonEncode(signUpRequest)}');
 
     final res = await http.post(
-      Uri.parse('http://localhost:8080/signup/oauth2/kakao'),
+      Uri.parse('${Config.baseUrl}/signup/oauth2/kakao'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(signUpRequest),
     );
@@ -110,15 +111,17 @@ class _SurveyScreenState extends State<SurveyScreen> {
     } else {
       showDialog(
         context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('회원가입 실패'),
-          content: Text('에러 ${res.statusCode}\n${res.body}'),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('확인')),
-          ],
-        ),
+        builder:
+            (_) => AlertDialog(
+              title: const Text('회원가입 실패'),
+              content: Text('에러 ${res.statusCode}\n${res.body}'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('확인'),
+                ),
+              ],
+            ),
       );
     }
   }
@@ -156,9 +159,10 @@ class _SurveyScreenState extends State<SurveyScreen> {
                 backgroundColor: Colors.grey,
                 selectedColor: Colors.deepPurple,
                 labelStyle: TextStyle(
-                  color: _selGender == Gender.MALE.name
-                      ? Colors.white
-                      : Colors.black,
+                  color:
+                      _selGender == Gender.MALE.name
+                          ? Colors.white
+                          : Colors.black,
                 ),
               ),
               const SizedBox(width: 16),
@@ -174,9 +178,10 @@ class _SurveyScreenState extends State<SurveyScreen> {
                 backgroundColor: Colors.grey,
                 selectedColor: Colors.deepPurple,
                 labelStyle: TextStyle(
-                  color: _selGender == Gender.FEMALE.name
-                      ? Colors.white
-                      : Colors.black,
+                  color:
+                      _selGender == Gender.FEMALE.name
+                          ? Colors.white
+                          : Colors.black,
                 ),
               ),
             ],
@@ -208,27 +213,36 @@ class _SurveyScreenState extends State<SurveyScreen> {
                 hint: const Text('년'),
                 value: _selYear,
                 onChanged: (v) => setState(() => _selYear = v),
-                items: years
-                    .map((y) => DropdownMenuItem(value: y, child: Text('$y년')))
-                    .toList(),
+                items:
+                    years
+                        .map(
+                          (y) => DropdownMenuItem(value: y, child: Text('$y년')),
+                        )
+                        .toList(),
               ),
               const SizedBox(width: 8),
               DropdownButton<String>(
                 hint: const Text('월'),
                 value: _selMonth,
                 onChanged: (v) => setState(() => _selMonth = v),
-                items: months
-                    .map((m) => DropdownMenuItem(value: m, child: Text('$m월')))
-                    .toList(),
+                items:
+                    months
+                        .map(
+                          (m) => DropdownMenuItem(value: m, child: Text('$m월')),
+                        )
+                        .toList(),
               ),
               const SizedBox(width: 8),
               DropdownButton<String>(
                 hint: const Text('일'),
                 value: _selDay,
                 onChanged: (v) => setState(() => _selDay = v),
-                items: days
-                    .map((d) => DropdownMenuItem(value: d, child: Text('$d일')))
-                    .toList(),
+                items:
+                    days
+                        .map(
+                          (d) => DropdownMenuItem(value: d, child: Text('$d일')),
+                        )
+                        .toList(),
               ),
             ],
           ),
@@ -262,9 +276,12 @@ class _SurveyScreenState extends State<SurveyScreen> {
             hint: const Text('예: 170'),
             value: _selHeight,
             onChanged: (v) => setState(() => _selHeight = v),
-            items: options
-                .map((h) => DropdownMenuItem(value: h, child: Text('$h cm')))
-                .toList(),
+            items:
+                options
+                    .map(
+                      (h) => DropdownMenuItem(value: h, child: Text('$h cm')),
+                    )
+                    .toList(),
           ),
           const SizedBox(height: 20),
           ElevatedButton(
@@ -290,9 +307,12 @@ class _SurveyScreenState extends State<SurveyScreen> {
             hint: const Text('예: 65'),
             value: _selWeight,
             onChanged: (v) => setState(() => _selWeight = v),
-            items: options
-                .map((w) => DropdownMenuItem(value: w, child: Text('$w kg')))
-                .toList(),
+            items:
+                options
+                    .map(
+                      (w) => DropdownMenuItem(value: w, child: Text('$w kg')),
+                    )
+                    .toList(),
           ),
           const SizedBox(height: 20),
           ElevatedButton(
@@ -318,9 +338,10 @@ class _SurveyScreenState extends State<SurveyScreen> {
             hint: const Text('혈액형'),
             value: _selBloodType,
             onChanged: (v) => setState(() => _selBloodType = v),
-            items: types
-                .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                .toList(),
+            items:
+                types
+                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                    .toList(),
           ),
           const SizedBox(height: 20),
           ElevatedButton(
@@ -342,11 +363,13 @@ class _SurveyScreenState extends State<SurveyScreen> {
       child: Column(
         children: [
           DropdownButton<int>(
-            hint: const Text('0~100'),
+            hint: const Text('0~40'),
             value: _selSmoke,
             onChanged: (v) => setState(() => _selSmoke = v),
             items: List.generate(
-                101, (i) => DropdownMenuItem(value: i, child: Text('$i'))),
+              101,
+              (i) => DropdownMenuItem(value: i, child: Text('$i')),
+            ),
           ),
           const SizedBox(height: 20),
           ElevatedButton(
@@ -372,7 +395,9 @@ class _SurveyScreenState extends State<SurveyScreen> {
             value: _selAlcohol,
             onChanged: (v) => setState(() => _selAlcohol = v),
             items: List.generate(
-                8, (i) => DropdownMenuItem(value: i, child: Text('$i'))),
+              8,
+              (i) => DropdownMenuItem(value: i, child: Text('$i')),
+            ),
           ),
           const SizedBox(height: 20),
           ElevatedButton(
@@ -398,7 +423,9 @@ class _SurveyScreenState extends State<SurveyScreen> {
             value: _selExercise,
             onChanged: (v) => setState(() => _selExercise = v),
             items: List.generate(
-                8, (i) => DropdownMenuItem(value: i, child: Text('$i'))),
+              8,
+              (i) => DropdownMenuItem(value: i, child: Text('$i')),
+            ),
           ),
           const SizedBox(height: 20),
           ElevatedButton(
@@ -429,18 +456,26 @@ class _SurveyScreenState extends State<SurveyScreen> {
               DropdownButton<int>(
                 hint: const Text('시'),
                 value: _selAlarmHour,
-                items: hours
-                    .map((h) => DropdownMenuItem(value: h, child: Text('$h 시')))
-                    .toList(),
+                items:
+                    hours
+                        .map(
+                          (h) =>
+                              DropdownMenuItem(value: h, child: Text('$h 시')),
+                        )
+                        .toList(),
                 onChanged: (v) => setState(() => _selAlarmHour = v),
               ),
               const SizedBox(width: 16),
               DropdownButton<int>(
                 hint: const Text('분'),
                 value: _selAlarmMinute,
-                items: minutes
-                    .map((m) => DropdownMenuItem(value: m, child: Text('$m 분')))
-                    .toList(),
+                items:
+                    minutes
+                        .map(
+                          (m) =>
+                              DropdownMenuItem(value: m, child: Text('$m 분')),
+                        )
+                        .toList(),
                 onChanged: (v) => setState(() => _selAlarmMinute = v),
               ),
             ],
@@ -456,7 +491,8 @@ class _SurveyScreenState extends State<SurveyScreen> {
               }
               // 1) SharedPreferences에 저장
               final prefs = await SharedPreferences.getInstance();
-              final timeStr = '${_selAlarmHour!.toString().padLeft(2, '0')}:'
+              final timeStr =
+                  '${_selAlarmHour!.toString().padLeft(2, '0')}:'
                   '${_selAlarmMinute!.toString().padLeft(2, '0')}';
               await prefs.setString('alarm_time', timeStr);
 
@@ -566,7 +602,7 @@ class _SurveyScreenState extends State<SurveyScreen> {
     debugPrint('📝 payload: ${jsonEncode(signupPayload)}');
 
     final res = await http.post(
-      Uri.parse('http://localhost:8080/signup/oauth2/kakao'),
+      Uri.parse('${Config.baseUrl}/signup/oauth2/kakao'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(signupPayload),
     );

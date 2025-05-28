@@ -4,6 +4,7 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config.dart';
 
 class ReportWeekly extends StatefulWidget {
   final VoidCallback onBack;
@@ -49,7 +50,7 @@ class _ReportWeeklyState extends State<ReportWeekly> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken') ?? '';
 
-    final url = Uri.parse('http://localhost:8080/health/report/scores');
+    final url = Uri.parse('${Config.baseUrl}/health/report/scores');
     final client = http.Client();
     final request =
         http.Request('GET', url)
@@ -274,7 +275,7 @@ class _ReportWeeklyState extends State<ReportWeekly> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('accessToken') ?? '';
 
-    final url = Uri.parse('http://localhost:8080/health/report/scores');
+    final url = Uri.parse('${Config.baseUrl}/health/report/scores');
     final client = http.Client();
 
     final request = http.Request('GET', url)

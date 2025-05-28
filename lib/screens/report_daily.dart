@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'server_meal_report.dart';
+import '../config.dart';
 
 class ReportDaily extends StatefulWidget {
   final DateTime selectedDate;
@@ -44,7 +45,7 @@ class _ReportDailyState extends State<ReportDaily> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('accessToken') ?? '';
       final res = await http.get(
-        Uri.parse('http://localhost:8080/health/report?date=$dateStr'),
+        Uri.parse('${Config.baseUrl}/health/report?date=$dateStr'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -90,10 +91,14 @@ class _ReportDailyState extends State<ReportDaily> {
     switch (key) {
       case 'carbohydrate':
         return meals.fold(
-            0.0, (sum, meal) => sum + (meal['totalCarbohydrate'] ?? 0.0));
+          0.0,
+          (sum, meal) => sum + (meal['totalCarbohydrate'] ?? 0.0),
+        );
       case 'protein':
         return meals.fold(
-            0.0, (sum, meal) => sum + (meal['totalProtein'] ?? 0.0));
+          0.0,
+          (sum, meal) => sum + (meal['totalProtein'] ?? 0.0),
+        );
       case 'fat':
         return meals.fold(0.0, (sum, meal) => sum + (meal['totalFat'] ?? 0.0));
       default:
@@ -116,7 +121,8 @@ class _ReportDailyState extends State<ReportDaily> {
         itemCount: days.length,
         itemBuilder: (_, i) {
           final d = days[i];
-          final isSelected = DateFormat('yyyy-MM-dd').format(d) ==
+          final isSelected =
+              DateFormat('yyyy-MM-dd').format(d) ==
               DateFormat('yyyy-MM-dd').format(selectedDate);
           return GestureDetector(
             onTap: () {
@@ -134,10 +140,13 @@ class _ReportDailyState extends State<ReportDaily> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
-                child: Text('${d.day}',
-                    style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.bold)),
+                child: Text(
+                  '${d.day}',
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : Colors.black,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           );
@@ -174,143 +183,190 @@ class _ReportDailyState extends State<ReportDaily> {
         title: const Text("일일 리포트", style: TextStyle(color: Colors.deepPurple)),
         centerTitle: true,
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(dateStr,
+      body:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      dateStr,
                       style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black87)),
-                  const SizedBox(height: 8),
-                  _buildDateSelector(),
-                  const SizedBox(height: 12),
-                  // ✅ 수정: 생활 습관 점수 박스 + 프로그레스바
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(12),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 8),
+                    _buildDateSelector(),
+                    const SizedBox(height: 12),
+                    // ✅ 수정: 생활 습관 점수 박스 + 프로그레스바
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                "생활 습관 점수",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                "$score점",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: scoreColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: LinearProgressIndicator(
+                              value: scoreRatio,
+                              minHeight: 10,
+                              backgroundColor: Colors.grey.shade200,
+                              valueColor: AlwaysStoppedAnimation(scoreColor),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // 칼로리 카드
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4EDFF),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                "Calories",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.search,
+                                  color: Colors.deepPurple,
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (_) => MealDetailScreenServer(
+                                            date: selectedDate,
+                                          ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "$totalKcal kcal",
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildBar(
+                            "단백질",
+                            proteinRatio,
+                            Colors.purple.shade200,
+                          ),
+                          const SizedBox(height: 8),
+                          _buildBar(
+                            "탄수화물",
+                            carbRatio,
+                            Colors.lightBlue.shade100,
+                          ),
+                          const SizedBox(height: 8),
+                          _buildBar("지방", fatRatio, Colors.green.shade100),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    Row(
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text("생활 습관 점수",
-                                style: TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.bold)),
-                            Text("$score점",
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: scoreColor)),
-                          ],
+                        _miniCard(
+                          "💧",
+                          "음수량",
+                          "${record?['waterIntake'] ?? 0} ml",
                         ),
-                        const SizedBox(height: 8),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
-                            value: scoreRatio,
-                            minHeight: 10,
-                            backgroundColor: Colors.grey.shade200,
-                            valueColor: AlwaysStoppedAnimation(scoreColor),
+                        const SizedBox(width: 12),
+                        _miniCard(
+                          "🚬",
+                          "흡연량",
+                          "${record?['smokeCigarettes'] ?? 0} 개비",
+                        ),
+                        const SizedBox(width: 12),
+                        _miniCard(
+                          "🍺",
+                          "음주량",
+                          "${record?['alcoholDrinks'] ?? 0} 잔",
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    Row(
+                      children: const [
+                        Icon(Icons.smart_toy, color: Colors.deepPurple),
+                        SizedBox(width: 8),
+                        Text(
+                          "AI Feedback",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.deepPurple,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // 칼로리 카드
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF4EDFF),
-                      borderRadius: BorderRadius.circular(16),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4EDFF),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        record?['healthFeedback'] ?? '오늘은 피드백이 없습니다.',
+                        style: const TextStyle(fontSize: 16),
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text("Calories",
-                                style: TextStyle(
-                                    fontSize: 18, fontWeight: FontWeight.bold)),
-                            IconButton(
-                              icon: const Icon(Icons.search,
-                                  color: Colors.deepPurple),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => MealDetailScreenServer(
-                                        date: selectedDate),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text("$totalKcal kcal",
-                            style: const TextStyle(
-                                fontSize: 26, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 16),
-                        _buildBar("단백질", proteinRatio, Colors.purple.shade200),
-                        const SizedBox(height: 8),
-                        _buildBar("탄수화물", carbRatio, Colors.lightBlue.shade100),
-                        const SizedBox(height: 8),
-                        _buildBar("지방", fatRatio, Colors.green.shade100),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  Row(
-                    children: [
-                      _miniCard("💧", "음수량", "${record?['waterIntake']} ml"),
-                      const SizedBox(width: 12),
-                      _miniCard(
-                          "🚬", "흡연량", "${record?['smokeCigarettes']} 개비"),
-                      const SizedBox(width: 12),
-                      _miniCard("🍺", "음주량", "${record?['alcoholDrinks']} 잔"),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  Row(
-                    children: const [
-                      Icon(Icons.smart_toy, color: Colors.deepPurple),
-                      SizedBox(width: 8),
-                      Text("AI Feedback",
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.deepPurple)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF4EDFF),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(record?['healthFeedback'] ?? '오늘은 피드백이 없습니다.',
-                        style: const TextStyle(fontSize: 16)),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
     );
   }
 
@@ -413,7 +469,7 @@ class _ReportDailyState extends State<ReportDaily> {
       final token = prefs.getString('accessToken') ?? '';
 
       final res = await http.get(
-        Uri.parse('http://localhost:8080/health/report?date=$dateStr'),
+        Uri.parse('${Config.baseUrl}/health/report?date=$dateStr'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

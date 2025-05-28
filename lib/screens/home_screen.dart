@@ -10,6 +10,7 @@ import 'meal_detail_screen.dart';
 import 'package:hive/hive.dart';
 import '../models/eaten_food.dart'; // 식단 하이브
 import '../models/daily_record.dart'; // 음수량, 흡연량 하이브
+import '../config.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -171,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final dateStr = DateFormat('yyyy-MM-dd').format(yesterday);
       print('📅 어제 날짜: $dateStr');
 
-      final url = Uri.parse('http://localhost:8080/health/report/scores');
+      final url = Uri.parse('${Config.baseUrl}/health/report/scores');
       final client = http.Client();
 
       final request =
@@ -329,7 +330,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(''),
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF0F0F5),
         elevation: 0,
         actions: [
           IconButton(
@@ -405,17 +406,21 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               children: [
                 _buildCountCard(
+                  iconData: Icons.water_drop,
                   title: '음수량',
                   count: _waterCount,
                   unit: '잔',
+                  bgColor: Colors.lightBlue.shade100,
                   onIncrement: _incrementWater,
                   onDecrement: _decrementWater,
                 ),
                 const SizedBox(width: 12),
                 _buildCountCard(
+                  iconData: Icons.smoking_rooms,
                   title: '흡연량',
                   count: _smokeCount,
                   unit: '개비',
+                  bgColor: const Color.fromARGB(255, 255, 225, 225),
                   onIncrement: _incrementSmoke,
                   onDecrement: _decrementSmoke,
                 ),
@@ -427,6 +432,7 @@ class _HomeScreenState extends State<HomeScreen> {
               value: _stepCount.round().toString(),
               unit: '걸음',
               icon: Icons.directions_walk,
+              bgColor: const Color(0xFFC6C8FF),
             ),
             const SizedBox(height: 32),
             const Text(
@@ -581,44 +587,73 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // 음수량/흡연량 카드를 만들기 위한 Expanded 위젯
   Widget _buildCountCard({
+    required IconData iconData,
     required String title,
     required int count,
     required String unit,
+    required Color bgColor,
     required VoidCallback onIncrement,
     required VoidCallback onDecrement,
   }) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(8),
+          color: bgColor,
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontSize: 16)),
-            const SizedBox(height: 8),
-            Text(
-              '$count $unit',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            // 아이콘
+            Icon(iconData, color: Colors.white, size: 32),
+            const SizedBox(height: 12),
+
+            // 1행: 제목 + 버튼
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.remove_circle_outline,
-                    color: Colors.red,
-                  ),
-                  onPressed: onDecrement, // ← 추가
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 14, color: Colors.white),
                 ),
                 IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                   icon: const Icon(
                     Icons.add_circle_outline,
-                    color: Colors.green,
+                    size: 28,
+                    color: Colors.white,
                   ),
                   onPressed: onIncrement,
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+
+            // 2행: 카운트 + 버튼
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '$count $unit',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(
+                    Icons.remove_circle_outline,
+                    size: 28,
+                    color: Colors.white,
+                  ),
+                  onPressed: onDecrement,
                 ),
               ],
             ),
@@ -628,29 +663,41 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // 걸음수 등 Pill 형태 카드를 위한 위젯
   Widget _buildStatCard({
+    required IconData icon,
     required String title,
     required String value,
+    required Color bgColor,
     required String unit,
-    required IconData icon,
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(32),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 32, color: Colors.deepPurple),
+          // 원 안에 아이콘
+          Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.deepPurple, size: 24),
+          ),
           const SizedBox(width: 16),
+          // 텍스트
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(title),
               Text(
-                '$value $unit',
+                value,
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,

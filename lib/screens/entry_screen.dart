@@ -11,6 +11,9 @@ import '../models/daily_record.dart';
 import 'meal_food_screen.dart';
 import 'drink_entry_screen.dart';
 
+import '../config.dart';
+import '../screens/report_screen.dart';
+
 class EntryScreen extends StatefulWidget {
   const EntryScreen({Key? key}) : super(key: key);
 
@@ -116,97 +119,132 @@ class _EntryScreenState extends State<EntryScreen> {
     );
   }
 
-  /// 저장: Hive 업데이트, 서버 전송, SharedPreferences 플래그 업데이트
+  Widget _buildLoadingDialog() {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text('생활습관 점수 계산 중…', style: TextStyle(color: Colors.white)),
+        ],
+      ),
+    );
+  }
+
   Future<void> _onSave() async {
-    // 1) Hive에 오늘 최종 값 저장
-    final totalWater = _initialWater + _extraWater;
-    final totalSmoke = _initialSmoke + _extraSmoke;
-    final box = Hive.box<DailyRecord>('dailyData');
-    final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final record = DailyRecord(waterCount: totalWater, smokeCount: totalSmoke);
-    await box.put(todayKey, record);
-
-    // 2) HealthKit, 식단 데이터 수집
-    final healthData = await _healthService.getTodayHealthData();
-    final mealBox = Hive.box<List<EatenFood>>('mealFoodsBox');
-    final mealTypes = ['BREAKFAST', 'LUNCH', 'DINNER', 'DESSERT'];
-    List<Map<String, dynamic>> mealRequestList = [];
-    for (final type in mealTypes) {
-      final key = '$todayKey|$type';
-      final storedList = mealBox.get(key, defaultValue: <EatenFood>[])!;
-      if (storedList.isEmpty) continue;
-      mealRequestList.add({
-        'mealType': type,
-        'mealTime': DateTime.now().toIso8601String(),
-        'mealFoodRequestList':
-            storedList
-                .map((e) => {'foodCode': e.foodCode, 'count': e.count})
-                .toList(),
-      });
-    }
-
-    final totalAlcoholMl = _beerCount * 250 + _sojuCount * 50;
-    final alcoholCount = totalAlcoholMl ~/ 100;
-
-    final payload = {
-      'healthKit': {
-        'period': {
-          'startDateTime':
-              DateTime.now()
-                  .subtract(const Duration(hours: 24))
-                  .toIso8601String(),
-          'endDateTime': DateTime.now().toIso8601String(),
-        },
-        'customHealthKit': {
-          'waterIntake': totalWater * 250,
-          'smokedCigarettes': totalSmoke,
-          'consumedAlcoholDrinks': alcoholCount,
-          'alcoholCost': _alcoholSpentMoney,
-        },
-        'appleHealthKit': {
-          'activity': {
-            'stepCount': (healthData['stepCount'] ?? 0).round(),
-            'distanceWalkingRunning':
-                (healthData['activity']['distanceWalkingRunning'] ?? 0.0)
-                    .round(),
-            'activeEnergyBurned':
-                (healthData['activity']['activeEnergyBurned'] ?? 0.0).round(),
-            'appleExerciseTime':
-                (healthData['activity']['appleExerciseTime'] ?? 0).round(),
-          },
-          'sleepAnalysis': healthData['sleep'],
-          'vitalSigns': {
-            'heartRate': (healthData['vital']['heartRate'] ?? 0).round(),
-            'oxygenSaturation':
-                (healthData['vital']['oxygenSaturation'] ?? 0).round(),
-            'bodyTemperature':
-                (healthData['vital']['bodyTemperature'] ?? 0.0).toDouble(),
-          },
-          'workouts': {
-            'workoutTypes':
-                healthData['exercise']
-                    .map((e) => e['exerciseType'])
-                    .toSet()
-                    .toList(),
-          },
-        },
-      },
-      'mealsRequest': {'mealRequestList': mealRequestList},
-    };
-
-    // 3) 서버 전송
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('accessToken') ?? '';
-    if (token.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('토큰이 없습니다. 로그인 후 다시 시도해주세요.')),
-      );
-      return;
-    }
+    // ➊ 로딩 다이얼로그 띄우기
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (_) => Dialog(
+            backgroundColor: Colors.transparent,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('생활습관 점수 계산 중…', style: TextStyle(color: Colors.white)),
+              ],
+            ),
+          ),
+    );
 
     try {
+      // 1) Hive에 오늘 최종 값 저장
+      final totalWater = _initialWater + _extraWater;
+      final totalSmoke = _initialSmoke + _extraSmoke;
+      final box = Hive.box<DailyRecord>('dailyData');
+      final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final record = DailyRecord(
+        waterCount: totalWater,
+        smokeCount: totalSmoke,
+      );
+      await box.put(todayKey, record);
+
+      // 2) HealthKit, 식단 데이터 수집
+      final healthData = await _healthService.getTodayHealthData();
+      final mealBox = Hive.box<List<EatenFood>>('mealFoodsBox');
+      final mealTypes = ['BREAKFAST', 'LUNCH', 'DINNER', 'DESSERT'];
+      List<Map<String, dynamic>> mealRequestList = [];
+      for (final type in mealTypes) {
+        final key = '$todayKey|$type';
+        final storedList = mealBox.get(key, defaultValue: <EatenFood>[])!;
+        if (storedList.isEmpty) continue;
+        mealRequestList.add({
+          'mealType': type,
+          'mealTime': DateTime.now().toIso8601String(),
+          'mealFoodRequestList':
+              storedList
+                  .map((e) => {'foodCode': e.foodCode, 'count': e.count})
+                  .toList(),
+        });
+      }
+
+      final totalAlcoholMl = _beerCount * 250 + _sojuCount * 50;
+      final alcoholCount = totalAlcoholMl ~/ 100;
+
+      final payload = {
+        'healthKit': {
+          'period': {
+            'startDateTime':
+                DateTime.now()
+                    .subtract(const Duration(hours: 24))
+                    .toIso8601String(),
+            'endDateTime': DateTime.now().toIso8601String(),
+          },
+          'customHealthKit': {
+            'waterIntake': totalWater * 250,
+            'smokedCigarettes': totalSmoke,
+            'consumedAlcoholDrinks': alcoholCount,
+            'alcoholCost': _alcoholSpentMoney,
+          },
+          'appleHealthKit': {
+            'activity': {
+              'stepCount': (healthData['stepCount'] ?? 0).round(),
+              'distanceWalkingRunning':
+                  (healthData['activity']['distanceWalkingRunning'] ?? 0.0)
+                      .round(),
+              'activeEnergyBurned':
+                  (healthData['activity']['activeEnergyBurned'] ?? 0.0).round(),
+              'appleExerciseTime':
+                  (healthData['activity']['appleExerciseTime'] ?? 0).round(),
+            },
+            'sleepAnalysis': healthData['sleep'],
+            'vitalSigns': {
+              'heartRate': (healthData['vital']['heartRate'] ?? 0).round(),
+              'oxygenSaturation':
+                  (healthData['vital']['oxygenSaturation'] ?? 0).round(),
+              'bodyTemperature':
+                  (healthData['vital']['bodyTemperature'] ?? 0.0).toDouble(),
+            },
+            'workouts': {
+              'workoutTypes':
+                  healthData['exercise']
+                      .map((e) => e['exerciseType'])
+                      .toSet()
+                      .toList(),
+            },
+          },
+        },
+        'mealsRequest': {'mealRequestList': mealRequestList},
+      };
+
+      // 3) 서버 전송
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('accessToken') ?? '';
+      if (token.isEmpty) {
+        Navigator.of(context, rootNavigator: true).pop(); // 로딩 다이얼로그 닫기
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('토큰이 없습니다. 로그인 후 다시 시도해주세요.')),
+        );
+        return;
+      }
+
       final res = await http.post(
-        Uri.parse('http://localhost:8080/health/report/submit'),
+        Uri.parse('${Config.baseUrl}/health/report/submit'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -215,7 +253,7 @@ class _EntryScreenState extends State<EntryScreen> {
       );
 
       if (res.statusCode == 200) {
-        // 제출 성공 → SharedPreferences에 오늘 제출 기록
+        // 제출 성공
         await prefs.setBool(_submitPrefKey, true);
         if (mounted) setState(() => _isSubmittedToday = true);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -230,14 +268,25 @@ class _EntryScreenState extends State<EntryScreen> {
           ),
         );
 
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.of(context, rootNavigator: true).pop(); // 로딩 다이얼로그 닫기
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder:
+                (_) => ReportScreen(
+                  initialPage: "일간",
+                  initialDate: DateTime.now(),
+                ),
+          ),
+        );
       } else {
-        // 이미 제출했거나 서버 에러
+        Navigator.of(context, rootNavigator: true).pop(); // 로딩 다이얼로그 닫기
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('오늘 이미 기록했거나, 저장에 실패했습니다.')),
         );
       }
     } catch (e) {
+      Navigator.of(context, rootNavigator: true).pop(); // 로딩 다이얼로그 닫기
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('오류 발생: $e')));
@@ -652,7 +701,7 @@ class _EntryScreenState extends State<EntryScreen> {
 
     try {
       final res = await http.post(
-        Uri.parse('http://localhost:8080/health/report/submit'),
+        Uri.parse('http://${Config.baseUrl}/health/report/submit'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token'

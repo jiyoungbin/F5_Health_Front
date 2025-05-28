@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/daily_record.dart';
 import '../models/eaten_food.dart';
+import '../config.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -134,7 +135,7 @@ F5_Health는 다음과 같은 개인정보를 수집합니다.
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('accessToken');
       final res = await http.get(
-        Uri.parse('http://localhost:8080/v1/members/me'),
+        Uri.parse('${Config.baseUrl}/v1/members/me'),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
@@ -180,7 +181,7 @@ F5_Health는 다음과 같은 개인정보를 수집합니다.
         'weekExerciseFrequency': weekExerciseFrequency,
       });
       final res = await http.patch(
-        Uri.parse('http://localhost:8080/v1/members/me/edit'),
+        Uri.parse('${Config.baseUrl}/v1/members/me/edit'),
         headers: {
           'Content-Type': 'application/json',
           if (token != null) 'Authorization': 'Bearer $token',
@@ -196,19 +197,20 @@ F5_Health는 다음과 같은 개인정보를 수집합니다.
           this.weekAlcoholDrinks = weekAlcoholDrinks;
           this.weekExerciseFrequency = weekExerciseFrequency;
         });
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('프로필이 업데이트되었습니다.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('프로필이 업데이트되었습니다.')));
       } else {
         debugPrint('❌ 프로필 업데이트 실패: ${res.statusCode}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('프로필 업데이트에 실패했습니다.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('프로필 업데이트에 실패했습니다.')));
       }
     } catch (e) {
       debugPrint('❌ 프로필 업데이트 오류: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('프로필 업데이트 중 오류가 발생했습니다.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('프로필 업데이트 중 오류가 발생했습니다.')));
     }
   }
 
@@ -242,8 +244,10 @@ F5_Health는 다음과 같은 개인정보를 수집합니다.
         children: [
           const Padding(
             padding: EdgeInsets.all(16),
-            child: Text('설정 메뉴',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: Text(
+              '설정 메뉴',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
           ),
 
           // ───────────────────────────────────
@@ -290,7 +294,9 @@ F5_Health는 다음과 같은 개인정보를 수집합니다.
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black, foregroundColor: Colors.white),
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+              ),
               onPressed: _handleLogout,
               child: const Text('Log out'),
             ),
@@ -311,70 +317,74 @@ F5_Health는 다음과 같은 개인정보를 수집합니다.
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('내 정보 변경'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nickCtrl,
-                decoration: const InputDecoration(labelText: '닉네임'),
+      builder:
+          (_) => AlertDialog(
+            title: const Text('내 정보 변경'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nickCtrl,
+                    decoration: const InputDecoration(labelText: '닉네임'),
+                  ),
+                  TextField(
+                    controller: hCtrl,
+                    decoration: const InputDecoration(labelText: '키(cm)'),
+                    keyboardType: TextInputType.number,
+                  ),
+                  TextField(
+                    controller: wCtrl,
+                    decoration: const InputDecoration(labelText: '몸무게(kg)'),
+                    keyboardType: TextInputType.number,
+                  ),
+                  TextField(
+                    controller: sCtrl,
+                    decoration: const InputDecoration(labelText: '하루 흡연량(개비)'),
+                    keyboardType: TextInputType.number,
+                  ),
+                  TextField(
+                    controller: aCtrl,
+                    decoration: const InputDecoration(labelText: '주간 음주 횟수'),
+                    keyboardType: TextInputType.number,
+                  ),
+                  TextField(
+                    controller: eCtrl,
+                    decoration: const InputDecoration(labelText: '주간 운동 빈도'),
+                    keyboardType: TextInputType.number,
+                  ),
+                ],
               ),
-              TextField(
-                controller: hCtrl,
-                decoration: const InputDecoration(labelText: '키(cm)'),
-                keyboardType: TextInputType.number,
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('취소'),
               ),
-              TextField(
-                controller: wCtrl,
-                decoration: const InputDecoration(labelText: '몸무게(kg)'),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: sCtrl,
-                decoration: const InputDecoration(labelText: '하루 흡연량(개비)'),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: aCtrl,
-                decoration: const InputDecoration(labelText: '주간 음주 횟수'),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: eCtrl,
-                decoration: const InputDecoration(labelText: '주간 운동 빈도'),
-                keyboardType: TextInputType.number,
+              TextButton(
+                onPressed: () {
+                  final newNick = nickCtrl.text;
+                  final newH = int.tryParse(hCtrl.text) ?? height;
+                  final newW = int.tryParse(wCtrl.text) ?? weight;
+                  final newS = int.tryParse(sCtrl.text) ?? daySmokeCigarettes;
+                  final newA = int.tryParse(aCtrl.text) ?? weekAlcoholDrinks;
+                  final newE =
+                      int.tryParse(eCtrl.text) ?? weekExerciseFrequency;
+
+                  Navigator.pop(context);
+                  _updateProfile(
+                    nickname: newNick,
+                    height: newH,
+                    weight: newW,
+                    daySmokeCigarettes: newS,
+                    weekAlcoholDrinks: newA,
+                    weekExerciseFrequency: newE,
+                  );
+                },
+                child: const Text('저장'),
               ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context), child: const Text('취소')),
-          TextButton(
-            onPressed: () {
-              final newNick = nickCtrl.text;
-              final newH = int.tryParse(hCtrl.text) ?? height;
-              final newW = int.tryParse(wCtrl.text) ?? weight;
-              final newS = int.tryParse(sCtrl.text) ?? daySmokeCigarettes;
-              final newA = int.tryParse(aCtrl.text) ?? weekAlcoholDrinks;
-              final newE = int.tryParse(eCtrl.text) ?? weekExerciseFrequency;
-
-              Navigator.pop(context);
-              _updateProfile(
-                nickname: newNick,
-                height: newH,
-                weight: newW,
-                daySmokeCigarettes: newS,
-                weekAlcoholDrinks: newA,
-                weekExerciseFrequency: newE,
-              );
-            },
-            child: const Text('저장'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -402,14 +412,17 @@ F5_Health는 다음과 같은 개인정보를 수집합니다.
   void _showTextDialog(String title, String content) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(title),
-        content: SingleChildScrollView(child: Text(content)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context), child: const Text('닫기')),
-        ],
-      ),
+      builder:
+          (_) => AlertDialog(
+            title: Text(title),
+            content: SingleChildScrollView(child: Text(content)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('닫기'),
+              ),
+            ],
+          ),
     );
   }
 
@@ -421,7 +434,7 @@ F5_Health는 다음과 같은 개인정보를 수집합니다.
       final refresh = prefs.getString('refresh_token');
       if (refresh != null) {
         final res = await http.post(
-          Uri.parse('http://localhost:8080/logout'),
+          Uri.parse('${Config.baseUrl}/logout'),
           headers: {
             'Content-Type': 'application/json',
             'Refresh-Token': refresh,
@@ -438,9 +451,9 @@ F5_Health는 다음과 같은 개인정보를 수집합니다.
     } catch (e) {
       debugPrint('❌ 로그아웃 실패: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('로그아웃에 실패했습니다.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('로그아웃에 실패했습니다.')));
     }
   }
 }
@@ -644,7 +657,7 @@ F5_Health는 다음과 같은 개인정보를 수집합니다.
 
       if (refreshToken != null) {
         final res = await http.post(
-          Uri.parse('http://localhost:8080/logout'),
+          Uri.parse('${Config.baseUrl}/logout'),
           headers: {
             'Content-Type': 'application/json',
             'Refresh-Token': refreshToken,

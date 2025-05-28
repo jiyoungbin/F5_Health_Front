@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import '../config.dart';
 
 class BadgeScreen extends StatefulWidget {
   const BadgeScreen({super.key});
@@ -34,7 +35,7 @@ class _BadgeScreenState extends State<BadgeScreen> {
     }
 
     final response = await http.get(
-      Uri.parse('http://localhost:8080/v1/members/me'),
+      Uri.parse('${Config.baseUrl}/v1/members/me'),
       headers: {
         'Authorization': 'Bearer $accessToken',
         'Content-Type': 'application/json',
@@ -48,7 +49,8 @@ class _BadgeScreenState extends State<BadgeScreen> {
       print('📦 전체 응답: $data');
       print('🎯 myBadge.value: ${data['myBadge']['value']}');
       print(
-          '🧩 badgeKey로 매핑될 파일명: badge_${data['myBadge']['value'].toString().toLowerCase()}.png');
+        '🧩 badgeKey로 매핑될 파일명: badge_${data['myBadge']['value'].toString().toLowerCase()}.png',
+      );
 
       setState(() {
         badgeLabel = data['myBadge']['label'];
@@ -71,54 +73,64 @@ class _BadgeScreenState extends State<BadgeScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('등급 가이드')),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  Column(
-                    children: [
-                      Image.asset(
-                        imagePath,
-                        height: 100,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(Icons.broken_image,
-                              size: 80, color: Colors.grey);
+      body:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Column(
+                      children: [
+                        Image.asset(
+                          imagePath,
+                          height: 100,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.broken_image,
+                              size: 80,
+                              color: Colors.grey,
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          badgeLabel,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text('누적 건강 점수: $totalScore'),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    const Text(
+                      '등급별 목표',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: badgeModels.length,
+                        itemBuilder: (context, index) {
+                          final badge = badgeModels[index];
+                          return BadgeRow(
+                            grade: badge['label'],
+                            hp: badge['cutOffScore'],
+                          );
                         },
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        badgeLabel,
-                        style: const TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text('누적 건강 점수: $totalScore'),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  const Divider(),
-                  const SizedBox(height: 16),
-                  const Text('등급별 목표',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: badgeModels.length,
-                      itemBuilder: (context, index) {
-                        final badge = badgeModels[index];
-                        return BadgeRow(
-                          grade: badge['label'],
-                          hp: badge['cutOffScore'],
-                        );
-                      },
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 4,
         onTap: (i) {

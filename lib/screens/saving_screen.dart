@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import '../config.dart';
 
 class SavingScreen extends StatefulWidget {
   const SavingScreen({super.key});
@@ -23,13 +24,10 @@ class _SavingScreenState extends State<SavingScreen> {
     _fetchSavingData();
   }
 
-  // 금액을 포맷하고 음수일 때 "낭비했어요" 라벨 붙이기
+  // 금액을 포맷하고 음수일 때 "지출" 라벨 붙이기
   String _formatMoneyLabel(int amount) {
     final absFormatted = NumberFormat('#,###').format(amount.abs());
-    if (amount < 0) {
-      return '$absFormatted원 지출';
-    }
-    return '$absFormatted원';
+    return amount < 0 ? '$absFormatted원 지출' : '$absFormatted원';
   }
 
   // 금액에 따른 색 반환 (+: green, -: red)
@@ -48,7 +46,7 @@ class _SavingScreenState extends State<SavingScreen> {
 
     try {
       final res = await http.get(
-        Uri.parse('http://localhost:8080/v1/members/me/savings'),
+        Uri.parse('${Config.baseUrl}/v1/members/me/savings'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -63,7 +61,7 @@ class _SavingScreenState extends State<SavingScreen> {
       } else {
         setState(() => isLoading = false);
       }
-    } catch (e) {
+    } catch (_) {
       setState(() => isLoading = false);
     }
   }
@@ -83,10 +81,10 @@ class _SavingScreenState extends State<SavingScreen> {
       body:
           isLoading
               ? const Center(child: CircularProgressIndicator())
-              : Padding(
+              : SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Text(
                       '절약한 금액으로 건강에 투자해보세요 💪',
@@ -94,7 +92,7 @@ class _SavingScreenState extends State<SavingScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // 총 절약 금액 카드
+                    // --- 총 절약 금액 카드 ---
                     Card(
                       elevation: 3,
                       shape: RoundedRectangleBorder(
@@ -160,7 +158,7 @@ class _SavingScreenState extends State<SavingScreen> {
 
                     const SizedBox(height: 24),
 
-                    // AI 추천 카드
+                    // --- AI 맞춤형 건강 물품 추천 카드 ---
                     Card(
                       elevation: 2,
                       shape: RoundedRectangleBorder(
@@ -179,7 +177,12 @@ class _SavingScreenState extends State<SavingScreen> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            Text('✔️ $recommendation'),
+                            Text(
+                              recommendation.isNotEmpty
+                                  ? '✔️ $recommendation'
+                                  : '추천 항목이 없습니다.',
+                              style: const TextStyle(fontSize: 14),
+                            ),
                           ],
                         ),
                       ),
@@ -224,6 +227,7 @@ class _SavingScreenState extends State<SavingScreen> {
 }
 
 
+
 /*
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -261,7 +265,7 @@ class _SavingScreenState extends State<SavingScreen> {
 
     try {
       final res = await http.get(
-        Uri.parse('http://localhost:8080/v1/members/me/savings'),
+        Uri.parse('${Config.baseUrl}/v1/members/me/savings'),
         headers: {
           'Authorization': 'Bearer $token',
         },
