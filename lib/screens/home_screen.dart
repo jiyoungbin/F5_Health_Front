@@ -277,6 +277,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget buildWorkoutSection() {
+    final bgColors = [
+      Colors.purple.shade50,
+      Colors.blue.shade50,
+      Colors.green.shade50,
+      Colors.orange.shade50,
+    ];
+    final iconBgColors = [
+      Colors.purple.shade100,
+      Colors.blue.shade100,
+      Colors.green.shade100,
+      Colors.orange.shade100,
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -291,29 +304,106 @@ class _HomeScreenState extends State<HomeScreen> {
         else
           Column(
             children:
-                _workouts.map((w) {
+                _workouts.asMap().entries.map((entry) {
+                  final idx = entry.key;
+                  final w = entry.value;
+
+                  // 배경색 선정
+                  final cardBg = bgColors[idx % bgColors.length];
+                  final iconBg = iconBgColors[idx % iconBgColors.length];
+
+                  // 타입 대문자로 통일
+                  final type = w.exerciseType.toUpperCase();
+
+                  // 아이콘 위젯 분기
+                  Widget iconWidget;
+                  switch (type) {
+                    case 'RUNNING':
+                    case 'RUNNING_TREADMILL':
+                      iconWidget = const Icon(
+                        Icons.directions_run,
+                        size: 24,
+                        color: Colors.purple,
+                      );
+                      break;
+                    case 'SWIMMING':
+                    case 'SWIMMING_POOL':
+                    case 'SWIMMING_OPEN_WATER':
+                      iconWidget = const Icon(
+                        Icons.pool,
+                        size: 24,
+                        color: Colors.blue,
+                      );
+                      break;
+                    default:
+                      iconWidget = const Text(
+                        '🔥',
+                        style: TextStyle(fontSize: 24),
+                      );
+                  }
+
                   final formattedStart = DateFormat.yMd().add_jm().format(
                     w.start,
                   );
                   final formattedEnd = DateFormat.yMd().add_jm().format(w.end);
 
                   return Container(
-                    margin: const EdgeInsets.symmetric(vertical: 6),
-                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(8),
+                      color: cardBg,
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Column(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('운동 종류: ${formatWorkoutType(w.exerciseType)}'),
-                        Text('시작: $formattedStart'),
-                        Text('종료: $formattedEnd'),
-                        Text(
-                          w.calories >= 0
-                              ? '칼로리: ${w.calories.toStringAsFixed(1)} kcal'
-                              : '칼로리: 정보 없음',
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: iconBg,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: iconWidget,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '운동 종류: ${formatWorkoutType(w.exerciseType)}',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '시작: $formattedStart',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                              Text(
+                                '종료: $formattedEnd',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                w.calories >= 0
+                                    ? '칼로리: ${w.calories.toStringAsFixed(1)} kcal'
+                                    : '칼로리: 정보 없음',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -420,7 +510,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   title: '흡연량',
                   count: _smokeCount,
                   unit: '개비',
-                  bgColor: const Color.fromARGB(255, 255, 225, 225),
+                  bgColor: const Color(0xFFF5D7DF),
                   onIncrement: _incrementSmoke,
                   onDecrement: _decrementSmoke,
                 ),
@@ -617,7 +707,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 14, color: Colors.white),
+                  style: const TextStyle(fontSize: 14, color: Colors.black),
                 ),
                 IconButton(
                   padding: EdgeInsets.zero,
@@ -625,13 +715,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: const Icon(
                     Icons.add_circle_outline,
                     size: 28,
-                    color: Colors.white,
+                    color: Colors.green,
                   ),
                   onPressed: onIncrement,
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
 
             // 2행: 카운트 + 버튼
             Row(
@@ -642,7 +732,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Colors.black,
                   ),
                 ),
                 IconButton(
@@ -651,7 +741,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: const Icon(
                     Icons.remove_circle_outline,
                     size: 28,
-                    color: Colors.white,
+                    color: Colors.red,
                   ),
                   onPressed: onDecrement,
                 ),

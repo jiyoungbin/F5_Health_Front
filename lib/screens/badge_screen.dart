@@ -84,7 +84,7 @@ class _BadgeScreenState extends State<BadgeScreen> {
                       children: [
                         Image.asset(
                           imagePath,
-                          height: 100,
+                          height: 150,
                           errorBuilder: (context, error, stackTrace) {
                             return const Icon(
                               Icons.broken_image,
