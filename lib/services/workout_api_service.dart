@@ -22,17 +22,18 @@ class WorkoutApiService {
     final body = jsonEncode({
       'date': DateTime.now().toIso8601String(),
       'stepCount': stepCount,
-      'workouts': workouts.map((w) {
-        final json = w.toJson();
+      'workouts':
+          workouts.map((w) {
+            final json = w.toJson();
 
-        final durationSeconds = w.end.difference(w.start).inSeconds;
-        json['duration'] = durationSeconds;
+            final durationSeconds = w.end.difference(w.start).inSeconds;
+            json['duration'] = durationSeconds;
 
-        json.remove('startTime');
-        json.remove('endTime');
+            json.remove('startTime');
+            json.remove('endTime');
 
-        return json;
-      }).toList(),
+            return json;
+          }).toList(),
     });
 
     // ✅ 디버깅 로그 추가

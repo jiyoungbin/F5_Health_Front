@@ -10,6 +10,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/daily_record.dart';
 import '../models/eaten_food.dart';
 import '../config.dart';
+import 'package:intl/intl.dart';
+
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -31,7 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // --- 기록 알림 시간 ---
   TimeOfDay? selectedTime;
 
-  // 약관·방침 텍스트 
+  // 약관·방침 텍스트
   final String _termsOfServiceText = '''
 [서비스 이용약관]
 
@@ -916,6 +918,9 @@ F5_Health(이하 “회사”)는 “정보통신망 이용촉진 및 정보보�
       await Hive.box<DailyRecord>('dailyData').clear();
       await Hive.box<List<EatenFood>>('mealFoodsBox').clear();
       final prefs = await SharedPreferences.getInstance();
+      final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      await prefs.remove('submitted_$todayKey');
+
       final refresh = prefs.getString('refresh_token');
       if (refresh != null) {
         final res = await http.post(
