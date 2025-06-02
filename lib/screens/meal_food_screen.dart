@@ -230,7 +230,10 @@ class _MealFoodScreenState extends State<MealFoodScreen> {
         actions: [
           TextButton(
             onPressed: _saveFoods,
-            child: const Text('완료', style: TextStyle(color: Colors.white)),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.deepPurple, // 텍스트를 보라색으로
+            ),
+            child: const Text('완료'),
           ),
         ],
       ),

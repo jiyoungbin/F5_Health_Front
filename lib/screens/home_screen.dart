@@ -424,10 +424,6 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_none, color: Colors.black),
-            onPressed: () => Navigator.pushNamed(context, '/alerts'),
-          ),
-          IconButton(
             icon: const Icon(Icons.settings, color: Colors.black),
             onPressed: () => Navigator.pushNamed(context, '/settings'),
           ),
