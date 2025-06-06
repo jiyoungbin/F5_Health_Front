@@ -36,7 +36,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    print('🛠 HomeScreen initState() 실행됨');
     _loadDailyCounts(); // 추가
     _fetchHealthData();
     _calculateMealStats();
@@ -153,24 +152,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchHealthData() async {
-    print('🌐 _fetchHealthData() 진입');
-
     final authorized = await _healthService.requestAuthorization();
-    print('🛂 권한 요청 결과: $authorized');
 
     if (!authorized) {
-      print('⛔️ 권한이 거부되어 데이터를 가져올 수 없습니다.');
       return;
     }
 
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('accessToken') ?? '';
-      print('🔑 액세스 토큰: $token');
 
       final yesterday = DateTime.now().subtract(const Duration(days: 1));
       final dateStr = DateFormat('yyyy-MM-dd').format(yesterday);
-      print('📅 어제 날짜: $dateStr');
 
       final url = Uri.parse('${Config.baseUrl}/health/report/scores');
       final client = http.Client();
@@ -183,16 +176,8 @@ class _HomeScreenState extends State<HomeScreen> {
             })
             ..body = jsonEncode({'start': dateStr, 'end': dateStr});
 
-      print('🚀 점수 API 요청 전 (GET + body)');
-      print('📦 URL: $url');
-      print('📦 Headers: ${request.headers}');
-      print('📦 Body: ${request.body}');
-
       final streamedResponse = await client.send(request);
       final response = await http.Response.fromStream(streamedResponse);
-
-      print('📥 점수 응답 상태 코드: ${response.statusCode}');
-      print('📥 응답 본문: ${utf8.decode(response.bodyBytes)}');
 
       int score = 0;
       if (response.statusCode == 200) {
@@ -200,12 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final scores = responseJson['scores'] as List<dynamic>;
         if (scores.isNotEmpty && scores[0]['healthLifeScore'] != null) {
           score = scores[0]['healthLifeScore'];
-          print('✅ 점수 추출 성공: $score');
-        } else {
-          print('⚠️ 점수 항목 없음 또는 비어있음');
         }
-      } else {
-        print('❌ 점수 API 호출 실패');
       }
 
       final workouts = await _healthService.fetchTodayWorkouts();
@@ -215,11 +195,8 @@ class _HomeScreenState extends State<HomeScreen> {
         _workouts = workouts;
         _stepCount = steps;
         _lifestyleScore = score;
-        print('🟢 setState 실행됨. steps = $steps, score = $_lifestyleScore');
       });
-    } catch (e, stack) {
-      print('❌ 예외 발생: $e');
-      print(stack);
+    } catch (e) {
     }
   }
 
@@ -271,7 +248,6 @@ class _HomeScreenState extends State<HomeScreen> {
       case 'SWIMMING_OPEN_WATER':
         return '수영';
       default:
-        print('❗️ Unknown workout type: $rawType');
         return '기타';
     }
   }

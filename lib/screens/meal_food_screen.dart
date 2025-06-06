@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -318,3 +319,4 @@ class _MealFoodScreenState extends State<MealFoodScreen> {
     );
   }
 }
+

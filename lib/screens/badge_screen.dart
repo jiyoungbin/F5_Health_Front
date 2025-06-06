@@ -30,7 +30,6 @@ class _BadgeScreenState extends State<BadgeScreen> {
     final accessToken = prefs.getString('accessToken');
 
     if (accessToken == null) {
-      print('❌ 액세스 토큰 없음');
       return;
     }
 
@@ -45,13 +44,6 @@ class _BadgeScreenState extends State<BadgeScreen> {
     if (response.statusCode == 200) {
       final data = json.decode(utf8.decode(response.bodyBytes));
 
-      // ✅ 디버깅 로그
-      print('📦 전체 응답: $data');
-      print('🎯 myBadge.value: ${data['myBadge']['value']}');
-      print(
-        '🧩 badgeKey로 매핑될 파일명: badge_${data['myBadge']['value'].toString().toLowerCase()}.png',
-      );
-
       setState(() {
         badgeLabel = data['myBadge']['label'];
         badgeKey =
@@ -60,16 +52,12 @@ class _BadgeScreenState extends State<BadgeScreen> {
         badgeModels = List<Map<String, dynamic>>.from(data['badgeModels']);
         isLoading = false;
       });
-    } else {
-      print('❌ 프로필 API 호출 실패: ${response.statusCode}');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final imagePath = 'assets/badges/badge_$badgeKey.png';
-
-    print('🖼️ 실제 로딩할 이미지 경로: $imagePath');
 
     return Scaffold(
       appBar: AppBar(title: const Text('등급 가이드')),

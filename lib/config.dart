@@ -4,6 +4,6 @@ class Config {
   static final String baseUrl =
       const String.fromEnvironment(
         'API_BASE_URL',
-        defaultValue: 'https://fa5a-117-17-157-28.ngrok-free.app',
+        defaultValue: 'https://f9e7-117-17-163-40.ngrok-free.app',
       ).trim();
 }
